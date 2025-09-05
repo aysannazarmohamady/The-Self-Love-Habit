@@ -118,9 +118,50 @@ if (isset($update['message'])) {
             sendMessage($chat_id, "Please enter a valid name (2-50 characters):");
         }
     }
-    // Handle other messages when user is in different steps
-    else {
-        sendMessage($chat_id, "Please start by typing /start");
+    // Handle Day 1 responses
+    elseif ($user && $user['step'] == 'day_1_active') {
+        $strengths = trim($text);
+        
+        if (strlen($strengths) > 10) {
+            $response_text = getCompletionMessage(1, $user['name']);
+            sendMessage($chat_id, $response_text);
+            
+            // Mark day 1 as completed
+            $completed_days = $user['completed_days'];
+            $completed_days[1] = [
+                'completed_at' => date('Y-m-d H:i:s'),
+                'response' => $strengths
+            ];
+            
+            saveUser($user_id, array_merge($user, [
+                'step' => 'waiting_for_next_day',
+                'completed_days' => $completed_days,
+                'current_day' => 2
+            ]));
+        } else {
+            $encourage_text = getEncouragementMessage(1);
+            sendMessage($chat_id, $encourage_text);
+        }
+    }
+    // Handle users who postponed and want to restart
+    elseif ($user && $user['step'] == 'postponed' && $text == '/start') {
+        $restart_text = "*Welcome back, {$user['name']}! 🌟*\n\n";
+        $restart_text .= "I'm so glad you're ready to begin your confidence journey! Are you ready to start with Day 1?";
+        
+        $keyboard = [
+            'inline_keyboard' => [
+                [
+                    ['text' => '✨ Yes, let\'s start now!', 'callback_data' => 'start_now'],
+                    ['text' => '⏰ Maybe later', 'callback_data' => 'start_later']
+                ]
+            ]
+        ];
+        
+        sendMessage($chat_id, $restart_text, $keyboard);
+        
+        saveUser($user_id, array_merge($user, [
+            'step' => 'waiting_for_start'
+        ]));
     }
 }
 ?>
