@@ -1,6 +1,7 @@
 <?php
 // config.php
-define('BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE');
+define('BOT_TOKEN', '');
+define('GEMINI_API_KEY', '');
 define('DATA_FILE', 'users.json');
 
 // Include challenges data
@@ -56,6 +57,61 @@ function sendMessage($chat_id, $text, $reply_markup = null) {
     
     $context = stream_context_create($options);
     return file_get_contents($url, false, $context);
+}
+
+// Generate AI coaching response using Gemini API
+function generateCoachingResponse($challenge_title, $user_response) {
+    $prompt = "You are a professional confidence coach responding to someone who just completed a daily self-confidence challenge.
+
+Challenge: \"{$challenge_title}\"
+User's response: \"{$user_response}\"
+
+Write a short, empowering, and supportive response (2-3 sentences max) that:
+- Acknowledges their effort and courage
+- Validates their experience 
+- Encourages continued growth
+- Feels personal and genuine
+- Uses a warm, professional coaching tone
+
+Keep it concise but impactful. No generic praise - make it feel authentic.";
+
+    $data = [
+        'contents' => [
+            [
+                'parts' => [
+                    ['text' => $prompt]
+                ]
+            ]
+        ]
+    ];
+
+    $options = [
+        'http' => [
+            'header' => [
+                "Content-Type: application/json",
+                "X-goog-api-key: " . GEMINI_API_KEY
+            ],
+            'method' => 'POST',
+            'content' => json_encode($data)
+        ]
+    ];
+
+    $context = stream_context_create($options);
+    $response = file_get_contents('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', false, $context);
+    
+    if ($response === false) {
+        // Fallback to default message if API fails
+        return "What an incredible step forward! Your willingness to share and grow takes real courage. You're building something amazing, one day at a time!";
+    }
+    
+    $result = json_decode($response, true);
+    
+    if (isset($result['candidates'][0]['content']['parts'][0]['text'])) {
+        return trim($result['candidates'][0]['content']['parts'][0]['text']);
+    }
+    
+    // Fallback message
+    return "What an incredible step forward! Your willingness to share and grow takes real courage. You're building something amazing, one day at a time!";
 }
 
 // Get main keyboard menu
@@ -190,10 +246,18 @@ function handleChallengeResponse($user_id, $user, $day, $text) {
             'response' => $response
         ];
         
-        $completion_message = getCompletionMessage($day, $user['name']);
+        // Get challenge title for AI response
+        $challenge = getChallenge($day);
+        $challenge_title = $challenge ? $challenge['title'] : "Day {$day} Challenge";
+        
+        // Generate AI coaching response
+        $ai_response = generateCoachingResponse($challenge_title, $response);
+        
         $points = calculatePoints(array_merge($user, ['completed_days' => $completed_days]));
         
-        $completion_message .= "\n\n🏆 *+10 Points! Total: {$points} points*";
+        $completion_message = "*{$user['name']}, {$ai_response}*\n\n";
+        $completion_message .= "*🎉 Day {$day} Complete!*\n\n";
+        $completion_message .= "🏆 *+10 Points! Total: {$points} points*";
         
         sendMessage($user['chat_id'], $completion_message, getMainKeyboard());
         
