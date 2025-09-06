@@ -58,6 +58,18 @@ function sendMessage($chat_id, $text, $reply_markup = null) {
     return file_get_contents($url, false, $context);
 }
 
+// Get main keyboard menu
+function getMainKeyboard() {
+    return [
+        'keyboard' => [
+            [['text' => '📊 My Progress'], ['text' => '📅 All Days']],
+            [['text' => '🎯 Today\'s Challenge'], ['text' => '❓ Help']]
+        ],
+        'resize_keyboard' => true,
+        'persistent' => true
+    ];
+}
+
 // Calculate user points
 function calculatePoints($user) {
     $points = 0;
@@ -65,7 +77,7 @@ function calculatePoints($user) {
     
     foreach ($completed_days as $day => $data) {
         if ($data['completed']) {
-            $points += 10; // 10 points per completed day
+            $points += 10;
         }
     }
     
@@ -94,58 +106,82 @@ function getUserProgress($user) {
 function generateProgressReport($user) {
     $progress = getUserProgress($user);
     $points = calculatePoints($user);
-    $completed_days = $user['completed_days'] ?? [];
     
     $message = "*🌟 {$user['name']}'s Confidence Journey 🌟*\n\n";
     $message .= "📊 *Progress:* {$progress['completed']}/30 days ({$progress['percentage']}%)\n";
     $message .= "🏆 *Total Points:* {$points}\n";
     $message .= "📅 *Started:* " . ($user['start_date'] ?? 'Not started') . "\n\n";
     
-    // Show completed days
-    if ($progress['completed'] > 0) {
-        $message .= "*✅ Completed Days:*\n";
-        foreach ($completed_days as $day => $data) {
-            if ($data['completed']) {
-                $challenge = getChallenge($day);
-                $title = $challenge ? $challenge['title'] : "Day {$day}";
-                $message .= "Day {$day}: {$title}\n";
-            }
-        }
-        $message .= "\n";
+    // Progress bar
+    $completed = $progress['completed'];
+    $bar_length = 20;
+    $filled = round(($completed / 30) * $bar_length);
+    $empty = $bar_length - $filled;
+    $progress_bar = str_repeat('🟩', $filled) . str_repeat('⬜', $empty);
+    $message .= "Progress: {$progress_bar}\n\n";
+    
+    if ($completed > 0) {
+        $message .= "Keep up the amazing work! 🚀\n";
+    } else {
+        $message .= "Ready to start your journey? 💪\n";
     }
     
-    // Show pending days
-    $pending_days = [];
-    for ($day = 1; $day <= 30; $day++) {
-        if (!isset($completed_days[$day]) || !$completed_days[$day]['completed']) {
-            $pending_days[] = $day;
-        }
-    }
-    
-    if (!empty($pending_days)) {
-        $message .= "*⏳ Pending Days:*\n";
-        $shown = 0;
-        foreach ($pending_days as $day) {
-            if ($shown >= 5) {
-                $remaining = count($pending_days) - 5;
-                $message .= "... and {$remaining} more days\n";
-                break;
-            }
-            $challenge = getChallenge($day);
-            $title = $challenge ? $challenge['title'] : "Day {$day}";
-            $message .= "Day {$day}: {$title}\n";
-            $shown++;
-        }
-    }
+    $message .= "\nUse '📅 All Days' to see and edit your responses!";
     
     return $message;
+}
+
+// Generate all days view
+function generateAllDaysView($user) {
+    $completed_days = $user['completed_days'] ?? [];
+    $current_day = $user['current_day'] ?? 1;
+    
+    $message = "*📅 Your 30-Day Challenge Overview*\n\n";
+    
+    // Create inline keyboard with all days
+    $buttons = [];
+    $row = [];
+    
+    for ($day = 1; $day <= 30; $day++) {
+        $is_completed = isset($completed_days[$day]) && $completed_days[$day]['completed'];
+        $is_available = $day <= $current_day;
+        
+        if ($is_completed) {
+            $status = '✅';
+        } elseif ($is_available) {
+            $status = '⭕';
+        } else {
+            $status = '🔒';
+        }
+        
+        $button_text = "Day {$day} {$status}";
+        $callback_data = $is_available ? "view_day_{$day}" : "locked_day_{$day}";
+        
+        $row[] = ['text' => $button_text, 'callback_data' => $callback_data];
+        
+        if (count($row) == 3) {
+            $buttons[] = $row;
+            $row = [];
+        }
+    }
+    
+    if (!empty($row)) {
+        $buttons[] = $row;
+    }
+    
+    $keyboard = ['inline_keyboard' => $buttons];
+    
+    $message .= "✅ = Completed | ⭕ = Available | 🔒 = Locked\n\n";
+    $message .= "Tap any available day to view or edit your response!";
+    
+    return [$message, $keyboard];
 }
 
 // Handle active challenge response
 function handleChallengeResponse($user_id, $user, $day, $text) {
     $response = trim($text);
     
-    if (strlen($response) > 10) {
+    if (strlen($response) >= 3) {
         // Mark as completed and award points
         $completed_days = $user['completed_days'] ?? [];
         $completed_days[$day] = [
@@ -159,7 +195,7 @@ function handleChallengeResponse($user_id, $user, $day, $text) {
         
         $completion_message .= "\n\n🏆 *+10 Points! Total: {$points} points*";
         
-        sendMessage($user['chat_id'], $completion_message);
+        sendMessage($user['chat_id'], $completion_message, getMainKeyboard());
         
         // Update user data
         $next_day = $day + 1;
@@ -173,7 +209,7 @@ function handleChallengeResponse($user_id, $user, $day, $text) {
         // If challenge is complete
         if ($day == 30) {
             $final_message = "\n\n🎊 *INCREDIBLE! You've completed the entire 30-Day Challenge!* 🎊\n\n";
-            $final_message .= "Use /profile to see your amazing journey summary!";
+            $final_message .= "You can still view and edit your responses anytime using '📅 All Days'!";
             sendMessage($user['chat_id'], $final_message);
         }
         
@@ -190,7 +226,7 @@ function getDaysSinceStart($start_date) {
     $start = new DateTime($start_date);
     $today = new DateTime();
     $interval = $start->diff($today);
-    return $interval->days + 1; // +1 because day 1 is the start date
+    return $interval->days + 1;
 }
 
 // Check if user should receive daily challenge
@@ -246,9 +282,9 @@ function processDailyChallenges() {
                 $missed_text = "*Hey {$user['name']}, I missed you! 💙*\n\n";
                 $missed_text .= "It looks like you missed {$missed_days} day(s) of your confidence challenge. That's totally okay - life happens! 🤗\n\n";
                 $missed_text .= "The important thing is that you're here now. Let's get back on track with today's challenge!\n\n";
-                $missed_text .= "Use /profile to see which days you can still complete. Remember, every step forward counts! 🌟";
+                $missed_text .= "Use '📅 All Days' to see which days you can still complete. Remember, every step forward counts! 🌟";
                 
-                sendMessage($user['chat_id'], $missed_text);
+                sendMessage($user['chat_id'], $missed_text, getMainKeyboard());
             }
         }
         
@@ -267,7 +303,7 @@ function processDailyChallenges() {
                     $challenge_message = formatChallengeMessage($today_day, $challenge, $user['name']);
                     $full_message = $morning_greeting . $challenge_message;
                     
-                    sendMessage($user['chat_id'], $full_message);
+                    sendMessage($user['chat_id'], $full_message, getMainKeyboard());
                     $sent_count++;
                     
                     // Update user step to today's challenge
@@ -280,10 +316,10 @@ function processDailyChallenges() {
             if (!isset($user['final_congratulation_sent'])) {
                 $final_text = "*🎊 AMAZING! You've reached the end of your 30-day journey! 🎊*\n\n";
                 $final_text .= "What an incredible accomplishment, {$user['name']}! You've shown up for yourself for 30 days and transformed your confidence along the way.\n\n";
-                $final_text .= "Use /profile to see your complete journey summary. You should be incredibly proud of yourself! 🌟\n\n";
+                $final_text .= "Use '📊 My Progress' to see your complete journey summary. You should be incredibly proud of yourself! 🌟\n\n";
                 $final_text .= "Remember, this isn't the end - it's the beginning of a more confident you! 💪";
                 
-                sendMessage($user['chat_id'], $final_text);
+                sendMessage($user['chat_id'], $final_text, getMainKeyboard());
                 $user['final_congratulation_sent'] = true;
                 $user['step'] = 'challenge_completed';
             }
@@ -336,7 +372,7 @@ if (isset($update['callback_query'])) {
         $challenge = getChallenge(1);
         $start_text .= formatChallengeMessage(1, $challenge, $user['name']);
         
-        sendMessage($chat_id, $start_text);
+        sendMessage($chat_id, $start_text, getMainKeyboard());
         
         // Update user status to day 1 active
         saveUser($user_id, array_merge($user, [
@@ -363,14 +399,52 @@ if (isset($update['callback_query'])) {
         
         file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
     }
-    // Handle retry challenge buttons
-    elseif (strpos($data, 'retry_day_') === 0) {
-        $day = intval(str_replace('retry_day_', '', $data));
+    // Handle view day buttons
+    elseif (strpos($data, 'view_day_') === 0) {
+        $day = intval(str_replace('view_day_', '', $data));
+        $completed_days = $user['completed_days'] ?? [];
         $challenge = getChallenge($day);
         
-        if ($challenge) {
-            $message = formatChallengeMessage($day, $challenge, $user['name']);
-            sendMessage($chat_id, $message);
+        if (!$challenge) {
+            file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id'] . "&text=Challenge not found!");
+            return;
+        }
+        
+        $challenge_title = $challenge['title'];
+        $is_completed = isset($completed_days[$day]) && $completed_days[$day]['completed'];
+        
+        if ($is_completed) {
+            $current_response = $completed_days[$day]['response'];
+            $completed_at = $completed_days[$day]['completed_at'];
+            
+            $view_message = "*📝 Day {$day}: {$challenge_title}*\n\n";
+            $view_message .= "*Status:* ✅ Completed\n";
+            $view_message .= "*Completed on:* " . date('M j, Y', strtotime($completed_at)) . "\n\n";
+            $view_message .= "*Your Response:*\n";
+            $view_message .= "_{$current_response}_\n\n";
+            $view_message .= "Would you like to edit your response?";
+            
+            $keyboard = [
+                'inline_keyboard' => [
+                    [
+                        ['text' => '✏️ Edit Response', 'callback_data' => "edit_day_{$day}"],
+                        ['text' => '🔙 Back to All Days', 'callback_data' => 'all_days']
+                    ]
+                ]
+            ];
+            
+            sendMessage($chat_id, $view_message, $keyboard);
+        } else {
+            // Show challenge and let user complete it
+            $challenge_message = formatChallengeMessage($day, $challenge, $user['name']);
+            
+            $keyboard = [
+                'inline_keyboard' => [
+                    [['text' => '🔙 Back to All Days', 'callback_data' => 'all_days']]
+                ]
+            ];
+            
+            sendMessage($chat_id, $challenge_message, $keyboard);
             
             // Set user to active for this day
             saveUser($user_id, array_merge($user, [
@@ -380,6 +454,50 @@ if (isset($update['callback_query'])) {
         }
         
         file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
+    // Handle edit day buttons
+    elseif (strpos($data, 'edit_day_') === 0) {
+        $day = intval(str_replace('edit_day_', '', $data));
+        $completed_days = $user['completed_days'] ?? [];
+        
+        if (isset($completed_days[$day]) && $completed_days[$day]['completed']) {
+            $current_response = $completed_days[$day]['response'];
+            $challenge = getChallenge($day);
+            $challenge_title = $challenge ? $challenge['title'] : "Day {$day}";
+            
+            $edit_message = "*✏️ Edit Your Response - Day {$day}*\n";
+            $edit_message .= "*Challenge:* {$challenge_title}\n\n";
+            $edit_message .= "*Your current response:*\n";
+            $edit_message .= "_{$current_response}_\n\n";
+            $edit_message .= "Please type your new response:";
+            
+            $keyboard = [
+                'inline_keyboard' => [
+                    [['text' => '❌ Cancel Edit', 'callback_data' => "view_day_{$day}"]]
+                ]
+            ];
+            
+            sendMessage($chat_id, $edit_message, $keyboard);
+            
+            // Set user to edit mode for this day
+            saveUser($user_id, array_merge($user, [
+                'step' => "edit_day_{$day}",
+                'last_activity' => date('Y-m-d H:i:s')
+            ]));
+        }
+        
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
+    // Handle all days button
+    elseif ($data == 'all_days') {
+        list($message, $keyboard) = generateAllDaysView($user);
+        sendMessage($chat_id, $message, $keyboard);
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
+    // Handle locked day
+    elseif (strpos($data, 'locked_day_') === 0) {
+        $day = intval(str_replace('locked_day_', '', $data));
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id'] . "&text=Day {$day} is not available yet! Complete previous days first.");
     }
 }
 
@@ -398,8 +516,8 @@ if (isset($update['message'])) {
         if ($user && isset($user['start_date'])) {
             // User already started challenge
             $welcome_back = "*Welcome back, {$user['name']}! 🌟*\n\n";
-            $welcome_back .= "You're already on your confidence journey! Use /profile to see your progress or /today to see today's challenge.";
-            sendMessage($chat_id, $welcome_back);
+            $welcome_back .= "You're already on your confidence journey! Use the menu below to navigate:";
+            sendMessage($chat_id, $welcome_back, getMainKeyboard());
         } else {
             $welcome_text = "*🌟 Welcome to the 30-Day Self-Confidence Challenge Bot! 🌟*\n\n";
             $welcome_text .= "I'm here to guide you through a scientifically-backed journey to boost your self-confidence over the next 30 days.\n\n";
@@ -416,69 +534,90 @@ if (isset($update['message'])) {
             ]);
         }
     }
-    // Handle /profile command
-    elseif ($text == '/profile') {
-        if ($user && isset($user['start_date'])) {
-            $report = generateProgressReport($user);
-            
-            // Add buttons for incomplete days
-            $completed_days = $user['completed_days'] ?? [];
-            $incomplete_days = [];
-            
-            for ($day = 1; $day <= min($user['current_day'] ?? 1, 30); $day++) {
-                if (!isset($completed_days[$day]) || !$completed_days[$day]['completed']) {
-                    $incomplete_days[] = $day;
-                }
-            }
-            
-            $keyboard = null;
-            if (!empty($incomplete_days)) {
-                $buttons = [];
-                $row = [];
-                foreach (array_slice($incomplete_days, 0, 6) as $day) {
-                    $row[] = ['text' => "Day {$day}", 'callback_data' => "retry_day_{$day}"];
-                    if (count($row) == 3) {
-                        $buttons[] = $row;
-                        $row = [];
+    // Handle keyboard menu buttons
+    elseif ($user && isset($user['start_date'])) {
+        switch ($text) {
+            case '📊 My Progress':
+                $report = generateProgressReport($user);
+                sendMessage($chat_id, $report, getMainKeyboard());
+                break;
+                
+            case '📅 All Days':
+                list($message, $keyboard) = generateAllDaysView($user);
+                sendMessage($chat_id, $message, $keyboard);
+                break;
+                
+            case '🎯 Today\'s Challenge':
+                $current_day = $user['current_day'] ?? 1;
+                $completed_days = $user['completed_days'] ?? [];
+                
+                if ($current_day > 30) {
+                    sendMessage($chat_id, "🎉 You've completed all 30 days! Congratulations! Use '📅 All Days' to review your journey.", getMainKeyboard());
+                } elseif (isset($completed_days[$current_day]) && $completed_days[$current_day]['completed']) {
+                    sendMessage($chat_id, "✅ You've already completed Day {$current_day}! Great job! Use '📅 All Days' to see other days.", getMainKeyboard());
+                } else {
+                    $challenge = getChallenge($current_day);
+                    if ($challenge) {
+                        $message = formatChallengeMessage($current_day, $challenge, $user['name']);
+                        sendMessage($chat_id, $message, getMainKeyboard());
+                        
+                        saveUser($user_id, array_merge($user, [
+                            'step' => "day_{$current_day}_active",
+                            'last_activity' => date('Y-m-d H:i:s')
+                        ]));
                     }
                 }
-                if (!empty($row)) {
-                    $buttons[] = $row;
-                }
+                break;
                 
-                $keyboard = ['inline_keyboard' => $buttons];
-                $report .= "\n💡 *Tap any pending day below to complete it:*";
-            }
-            
-            sendMessage($chat_id, $report, $keyboard);
-        } else {
-            sendMessage($chat_id, "You haven't started the challenge yet! Type /start to begin your journey! 🌟");
-        }
-    }
-    // Handle /today command
-    elseif ($text == '/today') {
-        if ($user && isset($user['start_date'])) {
-            $current_day = $user['current_day'] ?? 1;
-            $completed_days = $user['completed_days'] ?? [];
-            
-            if ($current_day > 30) {
-                sendMessage($chat_id, "🎉 You've completed all 30 days! Congratulations! Use /profile to see your amazing journey!");
-            } elseif (isset($completed_days[$current_day]) && $completed_days[$current_day]['completed']) {
-                sendMessage($chat_id, "✅ You've already completed Day {$current_day}! Great job! Use /profile to see other pending days.");
-            } else {
-                $challenge = getChallenge($current_day);
-                if ($challenge) {
-                    $message = formatChallengeMessage($current_day, $challenge, $user['name']);
-                    sendMessage($chat_id, $message);
+            case '❓ Help':
+                $help_text = "*🆘 How to Use This Bot*\n\n";
+                $help_text .= "*📊 My Progress* - View your journey overview, points, and completion percentage\n\n";
+                $help_text .= "*📅 All Days* - See all 30 days with status indicators. Tap any day to view or edit your response\n\n";
+                $help_text .= "*🎯 Today's Challenge* - Get your current day's challenge\n\n";
+                $help_text .= "*Day Status Indicators:*\n";
+                $help_text .= "✅ = Completed\n";
+                $help_text .= "⭕ = Available to complete\n";
+                $help_text .= "🔒 = Locked (complete previous days first)\n\n";
+                $help_text .= "*Privacy:* All your responses are encrypted and stored securely. Only you can see them!\n\n";
+                $help_text .= "Need more help? Contact the bot creator! 😊";
+                
+                sendMessage($chat_id, $help_text, getMainKeyboard());
+                break;
+                
+            default:
+                // Handle challenge responses
+                if (preg_match('/^day_(\d+)_active$/', $user['step'], $matches)) {
+                    $day = intval($matches[1]);
+                    handleChallengeResponse($user_id, $user, $day, $text);
+                } elseif (preg_match('/^edit_day_(\d+)$/', $user['step'], $matches)) {
+                    $day = intval($matches[1]);
+                    $new_response = trim($text);
                     
-                    saveUser($user_id, array_merge($user, [
-                        'step' => "day_{$current_day}_active",
-                        'last_activity' => date('Y-m-d H:i:s')
-                    ]));
+                    if (strlen($new_response) >= 3) {
+                        $completed_days = $user['completed_days'] ?? [];
+                        $completed_days[$day]['response'] = $new_response;
+                        $completed_days[$day]['edited_at'] = date('Y-m-d H:i:s');
+                        
+                        $edit_success = "*✅ Response Updated Successfully!*\n\n";
+                        $edit_success .= "*Day {$day} - New Response:*\n";
+                        $edit_success .= "_{$new_response}_\n\n";
+                        $edit_success .= "Your response has been saved! Keep up the amazing work! 🌟";
+                        
+                        sendMessage($chat_id, $edit_success, getMainKeyboard());
+                        
+                        // Return user to normal state
+                        saveUser($user_id, array_merge($user, [
+                            'step' => 'waiting_for_next_day',
+                            'completed_days' => $completed_days,
+                            'last_activity' => date('Y-m-d H:i:s')
+                        ]));
+                    } else {
+                        sendMessage($chat_id, "Please provide a response with at least 3 characters. 😊");
+                    }
+                } else {
+                    sendMessage($chat_id, "Hi {$user['name']}! 😊 Use the menu below to navigate:", getMainKeyboard());
                 }
-            }
-        } else {
-            sendMessage($chat_id, "You haven't started the challenge yet! Type /start to begin! 🌟");
+                break;
         }
     }
     // Handle name input
@@ -512,16 +651,11 @@ if (isset($update['message'])) {
                 'first_name' => $first_name,
                 'name' => $name,
                 'step' => 'waiting_for_start',
-                'created_at' => $user['created_at']
+                'created_at' => $user['created_at'] ?? date('Y-m-d H:i:s')
             ]);
         } else {
             sendMessage($chat_id, "Please enter a valid name (2-50 characters):");
         }
-    }
-    // Handle challenge responses for any day
-    elseif ($user && preg_match('/^day_(\d+)_active$/', $user['step'], $matches)) {
-        $day = intval($matches[1]);
-        handleChallengeResponse($user_id, $user, $day, $text);
     }
     // Handle users who postponed and want to restart
     elseif ($user && $user['step'] == 'postponed' && $text == '/start') {
@@ -543,10 +677,10 @@ if (isset($update['message'])) {
             'step' => 'waiting_for_start'
         ]));
     }
-    // Default response
+    // Default response for new users
     else {
         if ($user) {
-            sendMessage($chat_id, "Hi {$user['name']}! 😊\n\nUse /today for today's challenge, /profile to see your progress, or /start if you want to restart!");
+            sendMessage($chat_id, "Hi {$user['name']}! 😊 Use the menu below to navigate:", getMainKeyboard());
         } else {
             sendMessage($chat_id, "Please start by typing /start 🌟");
         }
