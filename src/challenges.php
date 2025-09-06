@@ -371,7 +371,7 @@ function getChallenge($day) {
 }
 
 function formatChallengeMessage($day, $challenge, $user_name) {
-    $message = "*🎉 Good morning, {$user_name}! Ready for today's adventure?*\n\n";
+    $message = "*🎉 Dear {$user_name}! Ready for today's adventure?*\n\n";
     $message .= "━━━━━━━━━━━━━━━━━━━━━\n";
     $message .= "*📅 DAY {$day}: {$challenge['title']}*\n";
     $message .= "━━━━━━━━━━━━━━━━━━━━━\n\n";
