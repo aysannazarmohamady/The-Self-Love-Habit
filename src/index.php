@@ -100,7 +100,6 @@ Keep it concise but impactful. No generic praise - make it feel authentic.";
     $response = file_get_contents('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', false, $context);
     
     if ($response === false) {
-        // Fallback to default message if API fails
         return "What an incredible step forward! Your willingness to share and grow takes real courage. You're building something amazing, one day at a time!";
     }
     
@@ -110,7 +109,6 @@ Keep it concise but impactful. No generic praise - make it feel authentic.";
         return trim($result['candidates'][0]['content']['parts'][0]['text']);
     }
     
-    // Fallback message
     return "What an incredible step forward! Your willingness to share and grow takes real courage. You're building something amazing, one day at a time!";
 }
 
@@ -291,127 +289,6 @@ function getDaysSinceStart($start_date) {
     $today = new DateTime();
     $interval = $start->diff($today);
     return $interval->days + 1;
-}
-
-// Check if user should receive daily challenge
-function shouldReceiveChallenge($user) {
-    if (!isset($user['start_date']) || !isset($user['current_day'])) {
-        return false;
-    }
-    
-    if ($user['current_day'] > 30) {
-        return false;
-    }
-    
-    if (isset($user['step']) && $user['step'] == 'postponed') {
-        return false;
-    }
-    
-    return true;
-}
-
-// Process daily challenges (called by cron job)
-function processDailyChallenges() {
-    $users = loadUsers();
-    $updated_users = [];
-    $sent_count = 0;
-    
-    foreach ($users as $user_id => $user) {
-        if (!shouldReceiveChallenge($user)) {
-            $updated_users[$user_id] = $user;
-            continue;
-        }
-        
-        $days_since_start = getDaysSinceStart($user['start_date']);
-        $current_day = $user['current_day'] ?? 1;
-        $completed_days = $user['completed_days'] ?? [];
-        
-        // Check if user missed previous days
-        if ($days_since_start > $current_day) {
-            $missed_days = $days_since_start - $current_day;
-            
-            // Mark missed days
-            for ($day = $current_day; $day < $days_since_start && $day <= 30; $day++) {
-                if (!isset($completed_days[$day]) || !$completed_days[$day]['completed']) {
-                    $completed_days[$day] = [
-                        'completed' => false,
-                        'missed_at' => date('Y-m-d H:i:s'),
-                        'response' => null
-                    ];
-                }
-            }
-            
-            // Send missed days notification
-            if ($missed_days > 0 && $days_since_start <= 30) {
-                $missed_text = "*Hey {$user['name']}, I missed you! 💙*\n\n";
-                $missed_text .= "It looks like you missed {$missed_days} day(s) of your confidence challenge. That's totally okay - life happens! 🤗\n\n";
-                $missed_text .= "The important thing is that you're here now. Let's get back on track with today's challenge!\n\n";
-                $missed_text .= "Use '📅 All Days' to see which days you can still complete. Remember, every step forward counts! 🌟";
-                
-                sendMessage($user['chat_id'], $missed_text, getMainKeyboard());
-            }
-        }
-        
-        // Send today's challenge if within 30 days
-        if ($days_since_start <= 30) {
-            $today_day = $days_since_start;
-            
-            // Check if today's challenge is already completed
-            if (!isset($completed_days[$today_day]) || !$completed_days[$today_day]['completed']) {
-                $challenge = getChallenge($today_day);
-                
-                if ($challenge) {
-                    $morning_greeting = "*🌅 Good morning, {$user['name']}! 🌅*\n\n";
-                    $morning_greeting .= "Ready for another step forward in your confidence journey? Let's make today amazing! ✨\n\n";
-                    
-                    $challenge_message = formatChallengeMessage($today_day, $challenge, $user['name']);
-                    $full_message = $morning_greeting . $challenge_message;
-                    
-                    sendMessage($user['chat_id'], $full_message, getMainKeyboard());
-                    $sent_count++;
-                    
-                    // Update user step to today's challenge
-                    $user['step'] = "day_{$today_day}_active";
-                    $user['current_day'] = $today_day;
-                }
-            }
-        } else {
-            // Challenge completed - send congratulations if not sent before
-            if (!isset($user['final_congratulation_sent'])) {
-                $final_text = "*🎊 AMAZING! You've reached the end of your 30-day journey! 🎊*\n\n";
-                $final_text .= "What an incredible accomplishment, {$user['name']}! You've shown up for yourself for 30 days and transformed your confidence along the way.\n\n";
-                $final_text .= "Use '📊 My Progress' to see your complete journey summary. You should be incredibly proud of yourself! 🌟\n\n";
-                $final_text .= "Remember, this isn't the end - it's the beginning of a more confident you! 💪";
-                
-                sendMessage($user['chat_id'], $final_text, getMainKeyboard());
-                $user['final_congratulation_sent'] = true;
-                $user['step'] = 'challenge_completed';
-            }
-        }
-        
-        // Update user data
-        $user['completed_days'] = $completed_days;
-        $user['last_daily_check'] = date('Y-m-d H:i:s');
-        $updated_users[$user_id] = $user;
-    }
-    
-    // Save updated user data
-    saveUsers($updated_users);
-    
-    // Log the operation
-    $log_message = date('Y-m-d H:i:s') . " - Daily challenges processed. Sent: {$sent_count} messages\n";
-    file_put_contents('daily_log.txt', $log_message, FILE_APPEND);
-    
-    return $sent_count;
-}
-
-// Check if this is a cron job request
-if ($_POST['cron_job'] ?? false) {
-    if (($_POST['action'] ?? '') === 'daily_challenges') {
-        $sent_count = processDailyChallenges();
-        echo json_encode(['status' => 'success', 'sent_count' => $sent_count]);
-        exit;
-    }
 }
 
 // Main webhook handler
