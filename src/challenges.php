@@ -17,7 +17,7 @@ function getChallenges() {
         
         2 => [
             'title' => 'Set a Small, Achievable Goal for Today',
-            'description' => 'Setting and achieving goals can be a massive confidence booster! 🎯\n\nToday, I want you to set a small, achievable goal that you can complete today. It could be something simple like finishing a book chapter, going for a 15-minute walk, organizing your desk, or calling a friend you haven\'t spoken to in a while.',
+            'description' => 'Setting and achieving goals can be a massive confidence booster! 🎯 Today, I want you to set a small, achievable goal that you can complete today. It could be something simple like finishing a book chapter, going for a 15-minute walk, organizing your desk, or calling a friend you haven\'t spoken to in a while.',
             'why_it_works' => 'Achieving goals, no matter how small, releases dopamine in your brain - the same chemical that makes you feel accomplished and motivated. Each small win builds momentum for bigger achievements!',
             'prompt' => 'What\'s one small goal you\'d like to achieve today? Make it specific and realistic - something that will make you feel proud when you complete it! 🌟',
             'encouragement' => [
@@ -29,14 +29,14 @@ function getChallenges() {
         
         3 => [
             'title' => 'Compliment Yourself Out Loud',
-            'description' => 'We often forget to appreciate ourselves, but today we\'re changing that! 🪞✨\n\nI want you to look in the mirror and give yourself a genuine compliment out loud. Yes, OUT LOUD! It might feel a bit weird at first, but hearing positive affirmations in your own voice is incredibly powerful.',
+            'description' => 'We often forget to appreciate ourselves, but today we\'re changing that! 🪞✨I want you to look in the mirror and give yourself a genuine compliment out loud. Yes, OUT LOUD! It might feel a bit weird at first, but hearing positive affirmations in your own voice is incredibly powerful.',
             'why_it_works' => 'When you speak positive affirmations aloud, you\'re engaging multiple senses and creating stronger neural pathways. Your brain starts to believe what it hears repeatedly, especially when it comes from you!',
             'prompt' => 'After you\'ve given yourself that compliment in the mirror, come back and tell me what you said! I\'d love to celebrate this moment with you. 🌟\n\nWhat compliment did you give yourself?',
             'encouragement' => [
                 'I know it can feel silly or uncomfortable at first! 😊',
                 'Try starting with something simple like:\n• "I am kind and compassionate"\n• "I am capable and strong"\n• "I have beautiful eyes"\n• "I am working hard to grow"\n\nThe key is to mean it when you say it. Look yourself in the eyes and speak with conviction! 💪'
             ],
-            'completion_message' => 'YES! 🎉 You just did something incredibly brave and powerful!\n\nSpeaking kindly to yourself out loud is a skill that many adults never develop. You\'re literally rewiring your brain to be more self-compassionate. How did it feel to hear those words in your own voice? 🌟'
+            'completion_message' => 'YES! 🎉 You just did something incredibly brave and powerful! Speaking kindly to yourself out loud is a skill that many adults never develop. You\'re literally rewiring your brain to be more self-compassionate. How did it feel to hear those words in your own voice? 🌟'
         ],
         
         4 => [
@@ -48,7 +48,7 @@ function getChallenges() {
                 'The beauty of trying something new is that there\'s no pressure to be perfect! 😊',
                 'Think about:\n• Something you\'ve always been curious about\n• A skill you\'ve wanted to learn\n• A new way to spend your free time\n• An activity that sounds fun but slightly intimidating\n\nRemember, courage isn\'t the absence of fear - it\'s doing something despite being nervous! 💪'
             ],
-            'completion_message' => 'How exciting! 🎉 You just expanded your world a little bit today!\n\nTrying new things takes courage, and you showed up for yourself in a beautiful way. Every new experience adds to your confidence bank - you\'re proving to yourself that you can handle unfamiliar situations. That\'s incredible! 🌟'
+            'completion_message' => 'How exciting! 🎉 You just expanded your world a little bit today! Trying new things takes courage, and you showed up for yourself in a beautiful way. Every new experience adds to your confidence bank - you\'re proving to yourself that you can handle unfamiliar situations. That\'s incredible! 🌟'
         ],
         
         5 => [
@@ -65,7 +65,7 @@ function getChallenges() {
         
         6 => [
             'title' => 'Dress in Your Favorite Outfit',
-            'description' => 'Today is all about feeling fabulous! ✨\n\nDress in your favorite outfit - the one that makes you feel like you can conquer the world! Clothes have a surprising impact on our mood and confidence. When we look good, we feel good, and that positive energy radiates outward.',
+            'description' => 'Today is all about feeling fabulous! ✨ Dress in your favorite outfit - the one that makes you feel like you can conquer the world! Clothes have a surprising impact on our mood and confidence. When we look good, we feel good, and that positive energy radiates outward.',
             'why_it_works' => 'This is called "enclothed cognition" - the psychological effect that clothes have on our mental state. What you wear can actually change how you think and feel about yourself!',
             'prompt' => 'Tell me about your favorite outfit! What makes you feel most confident and comfortable? And how do you feel when you\'re wearing it? 👗👔',
             'encouragement' => [
