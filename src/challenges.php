@@ -1,5 +1,5 @@
 <?php
-// challenges.php - All challenge data
+// All challenge data
 
 function getChallenges() {
     return [
@@ -368,18 +368,6 @@ function getChallenges() {
 function getChallenge($day) {
     $challenges = getChallenges();
     return isset($challenges[$day]) ? $challenges[$day] : null;
-}
-
-function formatChallengeMessage($day, $challenge, $user_name) {
-    $message = "*🎉 Dear {$user_name}! Ready for today's adventure?*\n\n";
-    $message .= "━━━━━━━━━━━━━━━━━━━━━\n";
-    $message .= "*📅 DAY {$day}: {$challenge['title']}*\n";
-    $message .= "━━━━━━━━━━━━━━━━━━━━━\n\n";
-    $message .= $challenge['description'] . "\n\n";
-    $message .= "💡 *Why this works:* " . $challenge['why_it_works'] . "\n\n";
-    $message .= $challenge['prompt'];
-    
-    return $message;
 }
 
 function getEncouragementMessage($day) {
