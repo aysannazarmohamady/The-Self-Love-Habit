@@ -4,6 +4,7 @@ define('BOT_TOKEN', '');
 define('GEMINI_API_KEY', '');
 define('DATA_FILE', 'users.json');
 
+// index.php
 // Include challenges data
 require_once 'challenges.php';
 
@@ -59,21 +60,27 @@ function sendMessage($chat_id, $text, $reply_markup = null) {
     return file_get_contents($url, false, $context);
 }
 
-// Generate AI coaching response using Gemini API
-function generateCoachingResponse($challenge_title, $user_response) {
-    $prompt = "You are a professional confidence coach responding to someone who just completed a daily self-confidence challenge.
+// Detect language of text (simple Persian detection)
+function detectLanguage($text) {
+    // Simple Persian detection based on Persian characters
+    $persian_pattern = '/[\x{0600}-\x{06FF}\x{0750}-\x{077F}\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u';
+    return preg_match($persian_pattern, $text) ? 'fa' : 'en';
+}
 
-Challenge: \"{$challenge_title}\"
-User's response: \"{$user_response}\"
+// Translate challenge to Persian using Gemini API
+function translateChallengeToPersian($challenge) {
+    $prompt = "Please translate this self-confidence challenge to Persian (Farsi). Make it a natural, concise summary that maintains the encouraging and positive tone. Don't translate word-by-word, but capture the essence and spirit of the challenge:
 
-Write a short, empowering, and supportive response (2-3 sentences max) that:
-- Acknowledges their effort and courage
-- Validates their experience 
-- Encourages continued growth
-- Feels personal and genuine
-- Uses a warm, professional coaching tone
+Title: \"{$challenge['title']}\"
+Description: \"{$challenge['description']}\"
+Prompt: \"{$challenge['prompt']}\"
 
-Keep it concise but impactful. No generic praise - make it feel authentic.";
+Please provide:
+1. Persian title
+2. Brief Persian description (2-3 sentences)
+3. Persian prompt/question
+
+Use warm, encouraging tone in Persian. Make it feel natural for Persian speakers.";
 
     $data = [
         'contents' => [
@@ -100,7 +107,7 @@ Keep it concise but impactful. No generic praise - make it feel authentic.";
     $response = file_get_contents('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', false, $context);
     
     if ($response === false) {
-        return "What an incredible step forward! Your willingness to share and grow takes real courage. You're building something amazing, one day at a time!";
+        return "متأسفانه در حال حاضر امکان ترجمه وجود ندارد. لطفاً بعداً تلاش کنید.";
     }
     
     $result = json_decode($response, true);
@@ -109,7 +116,80 @@ Keep it concise but impactful. No generic praise - make it feel authentic.";
         return trim($result['candidates'][0]['content']['parts'][0]['text']);
     }
     
-    return "What an incredible step forward! Your willingness to share and grow takes real courage. You're building something amazing, one day at a time!";
+    return "متأسفانه در حال حاضر امکان ترجمه وجود ندارد. لطفاً بعداً تلاش کنید.";
+}
+
+// Generate AI coaching response using Gemini API
+function generateCoachingResponse($challenge_title, $user_response, $language = 'en') {
+    if ($language == 'fa') {
+        $prompt = "شما یک مربی اعتماد به نفس حرفه‌ای هستید که به شخصی پاسخ می‌دهید که تازه چالش روزانه اعتماد به نفس را تکمیل کرده است.
+
+چالش: \"{$challenge_title}\"
+پاسخ کاربر: \"{$user_response}\"
+
+یک پاسخ کوتاه، قدرت‌بخش و حمایتی بنویسید (حداکثر 2-3 جمله) که:
+- تلاش و شجاعت آنها را تأیید کند
+- تجربه‌شان را ارزشمند بداند
+- آنها را به ادامه رشد تشویق کند
+- شخصی و صادق باشد
+- لحن گرم و حرفه‌ای داشته باشد
+
+آن را مختصر اما تأثیرگذار نگه دارید. بدون تعارف کلیشه‌ای - آن را اصیل حس کنید.";
+    } else {
+        $prompt = "You are a professional confidence coach responding to someone who just completed a daily self-confidence challenge.
+
+Challenge: \"{$challenge_title}\"
+User's response: \"{$user_response}\"
+
+Write a short, empowering, and supportive response (2-3 sentences max) that:
+- Acknowledges their effort and courage
+- Validates their experience 
+- Encourages continued growth
+- Feels personal and genuine
+- Uses a warm, professional coaching tone
+
+Keep it concise but impactful. No generic praise - make it feel authentic.";
+    }
+
+    $data = [
+        'contents' => [
+            [
+                'parts' => [
+                    ['text' => $prompt]
+                ]
+            ]
+        ]
+    ];
+
+    $options = [
+        'http' => [
+            'header' => [
+                "Content-Type: application/json",
+                "X-goog-api-key: " . GEMINI_API_KEY
+            ],
+            'method' => 'POST',
+            'content' => json_encode($data)
+        ]
+    ];
+
+    $context = stream_context_create($options);
+    $response = file_get_contents('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', false, $context);
+    
+    if ($response === false) {
+        return $language == 'fa' 
+            ? "چه قدم فوق‌العاده‌ای! آمادگی شما برای به اشتراک‌گذاری و رشد شجاعت واقعی می‌طلبد. شما در حال ساختن چیزی شگفت‌انگیز هستید، یک روز در یک زمان!"
+            : "What an incredible step forward! Your willingness to share and grow takes real courage. You're building something amazing, one day at a time!";
+    }
+    
+    $result = json_decode($response, true);
+    
+    if (isset($result['candidates'][0]['content']['parts'][0]['text'])) {
+        return trim($result['candidates'][0]['content']['parts'][0]['text']);
+    }
+    
+    return $language == 'fa' 
+        ? "چه قدم فوق‌العاده‌ای! آمادگی شما برای به اشتراک‌گذاری و رشد شجاعت واقعی می‌طلبد. شما در حال ساختن چیزی شگفت‌انگیز هستید، یک روز در یک زمان!"
+        : "What an incredible step forward! Your willingness to share and grow takes real courage. You're building something amazing, one day at a time!";
 }
 
 // Get main keyboard menu
@@ -236,26 +316,36 @@ function handleChallengeResponse($user_id, $user, $day, $text) {
     $response = trim($text);
     
     if (strlen($response) >= 3) {
+        // Detect language of response
+        $response_language = detectLanguage($response);
+        
         // Mark as completed and award points
         $completed_days = $user['completed_days'] ?? [];
         $completed_days[$day] = [
             'completed' => true,
             'completed_at' => date('Y-m-d H:i:s'),
-            'response' => $response
+            'response' => $response,
+            'language' => $response_language
         ];
         
         // Get challenge title for AI response
         $challenge = getChallenge($day);
         $challenge_title = $challenge ? $challenge['title'] : "Day {$day} Challenge";
         
-        // Generate AI coaching response
-        $ai_response = generateCoachingResponse($challenge_title, $response);
+        // Generate AI coaching response in appropriate language
+        $ai_response = generateCoachingResponse($challenge_title, $response, $response_language);
         
         $points = calculatePoints(array_merge($user, ['completed_days' => $completed_days]));
         
-        $completion_message = "*{$user['name']}, {$ai_response}*\n\n";
-        $completion_message .= "*🎉 Day {$day} Complete!*\n\n";
-        $completion_message .= "🏆 *+10 Points! Total: {$points} points*";
+        if ($response_language == 'fa') {
+            $completion_message = "*{$user['name']}، {$ai_response}*\n\n";
+            $completion_message .= "*🎉 روز {$day} تکمیل شد!*\n\n";
+            $completion_message .= "🏆 *+10 امتیاز! مجموع: {$points} امتیاز*";
+        } else {
+            $completion_message = "*{$user['name']}, {$ai_response}*\n\n";
+            $completion_message .= "*🎉 Day {$day} Complete!*\n\n";
+            $completion_message .= "🏆 *+10 Points! Total: {$points} points*";
+        }
         
         sendMessage($user['chat_id'], $completion_message, getMainKeyboard());
         
@@ -291,6 +381,28 @@ function getDaysSinceStart($start_date) {
     return $interval->days + 1;
 }
 
+// Format challenge message with translation button
+function formatChallengeMessage($day, $challenge, $user_name, $chat_id) {
+    $message = "*🎉 Dear {$user_name}! Ready for today's adventure?*\n\n";
+    $message .= "━━━━━━━━━━━━━━━━━━━━━\n";
+    $message .= "*📅 DAY {$day}: {$challenge['title']}*\n";
+    $message .= "━━━━━━━━━━━━━━━━━━━━━\n\n";
+    $message .= $challenge['description'] . "\n\n";
+    $message .= "💡 *Why this works:* " . $challenge['why_it_works'] . "\n\n";
+    $message .= $challenge['prompt'];
+    
+    // Add inline keyboard with Persian translation option
+    $keyboard = [
+        'inline_keyboard' => [
+            [['text' => '🇮🇷 توضیح به فارسی', 'callback_data' => "translate_fa_{$day}"]]
+        ]
+    ];
+    
+    // Send message with keyboard
+    sendMessage($chat_id, $message, $keyboard);
+    return $message;
+}
+
 // Main webhook handler
 $input = file_get_contents('php://input');
 $update = json_decode($input, true);
@@ -311,9 +423,9 @@ if (isset($update['callback_query'])) {
         
         // Get Day 1 challenge from external file
         $challenge = getChallenge(1);
-        $start_text .= formatChallengeMessage(1, $challenge, $user['name']);
+        formatChallengeMessage(1, $challenge, $user['name'], $chat_id);
         
-        sendMessage($chat_id, $start_text, getMainKeyboard());
+        sendMessage($chat_id, $start_text);
         
         // Update user status to day 1 active
         saveUser($user_id, array_merge($user, [
@@ -337,6 +449,29 @@ if (isset($update['callback_query'])) {
         saveUser($user_id, array_merge($user, [
             'step' => 'postponed'
         ]));
+        
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
+    // Handle translate to Persian
+    elseif (strpos($data, 'translate_fa_') === 0) {
+        $day = intval(str_replace('translate_fa_', '', $data));
+        $challenge = getChallenge($day);
+        
+        if ($challenge) {
+            $persian_translation = translateChallengeToPersian($challenge);
+            
+            $message = "*📝 توضیح به فارسی - روز {$day}*\n\n";
+            $message .= $persian_translation . "\n\n";
+            $message .= "_برای پاسخ دادن، متن خود را تایپ کنید. می‌توانید به فارسی یا انگلیسی پاسخ دهید._";
+            
+            $keyboard = [
+                'inline_keyboard' => [
+                    [['text' => '🔙 Back to English', 'callback_data' => "view_day_{$day}"]]
+                ]
+            ];
+            
+            sendMessage($chat_id, $message, $keyboard);
+        }
         
         file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
     }
@@ -377,7 +512,7 @@ if (isset($update['callback_query'])) {
             sendMessage($chat_id, $view_message, $keyboard);
         } else {
             // Show challenge and let user complete it
-            $challenge_message = formatChallengeMessage($day, $challenge, $user['name']);
+            $challenge_message = formatChallengeMessage($day, $challenge, $user['name'], $chat_id);
             
             $keyboard = [
                 'inline_keyboard' => [
@@ -385,7 +520,8 @@ if (isset($update['callback_query'])) {
                 ]
             ];
             
-            sendMessage($chat_id, $challenge_message, $keyboard);
+            // Send message with only back button since formatChallengeMessage already sends the main message
+            sendMessage($chat_id, "_Type your response below or use the Persian translation button above._", $keyboard);
             
             // Set user to active for this day
             saveUser($user_id, array_merge($user, [
@@ -499,8 +635,7 @@ if (isset($update['message'])) {
                 } else {
                     $challenge = getChallenge($current_day);
                     if ($challenge) {
-                        $message = formatChallengeMessage($current_day, $challenge, $user['name']);
-                        sendMessage($chat_id, $message, getMainKeyboard());
+                        formatChallengeMessage($current_day, $challenge, $user['name'], $chat_id);
                         
                         saveUser($user_id, array_merge($user, [
                             'step' => "day_{$current_day}_active",
@@ -535,14 +670,23 @@ if (isset($update['message'])) {
                     $new_response = trim($text);
                     
                     if (strlen($new_response) >= 3) {
+                        $response_language = detectLanguage($new_response);
                         $completed_days = $user['completed_days'] ?? [];
                         $completed_days[$day]['response'] = $new_response;
                         $completed_days[$day]['edited_at'] = date('Y-m-d H:i:s');
+                        $completed_days[$day]['language'] = $response_language;
                         
-                        $edit_success = "*✅ Response Updated Successfully!*\n\n";
-                        $edit_success .= "*Day {$day} - New Response:*\n";
-                        $edit_success .= "_{$new_response}_\n\n";
-                        $edit_success .= "Your response has been saved! Keep up the amazing work! 🌟";
+                        if ($response_language == 'fa') {
+                            $edit_success = "*✅ پاسخ با موفقیت به‌روزرسانی شد!*\n\n";
+                            $edit_success .= "*روز {$day} - پاسخ جدید:*\n";
+                            $edit_success .= "_{$new_response}_\n\n";
+                            $edit_success .= "پاسخ شما ذخیره شد! به کار فوق‌العاده‌تان ادامه دهید! 🌟";
+                        } else {
+                            $edit_success = "*✅ Response Updated Successfully!*\n\n";
+                            $edit_success .= "*Day {$day} - New Response:*\n";
+                            $edit_success .= "_{$new_response}_\n\n";
+                            $edit_success .= "Your response has been saved! Keep up the amazing work! 🌟";
+                        }
                         
                         sendMessage($chat_id, $edit_success, getMainKeyboard());
                         
