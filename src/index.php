@@ -7,6 +7,7 @@ define('DATA_FILE', 'users.json');
 // index.php
 // Include challenges data
 require_once 'challenges.php';
+require_once 'challenges_fa.php';
 
 // Load users data from JSON
 function loadUsers() {
@@ -67,56 +68,18 @@ function detectLanguage($text) {
     return preg_match($persian_pattern, $text) ? 'fa' : 'en';
 }
 
-// Translate challenge to Persian using Gemini API
-function translateChallengeToPersian($challenge) {
-    $prompt = "Please translate this self-confidence challenge to Persian (Farsi). Make it a natural, concise summary that maintains the encouraging and positive tone. Don't translate word-by-word, but capture the essence and spirit of the challenge:
-
-Title: \"{$challenge['title']}\"
-Description: \"{$challenge['description']}\"
-Prompt: \"{$challenge['prompt']}\"
-
-Please provide:
-1. Persian title
-2. Brief Persian description (2-3 sentences)
-3. Persian prompt/question
-
-Use warm, encouraging tone in Persian. Make it feel natural for Persian speakers.";
-
-    $data = [
-        'contents' => [
-            [
-                'parts' => [
-                    ['text' => $prompt]
-                ]
-            ]
-        ]
-    ];
-
-    $options = [
-        'http' => [
-            'header' => [
-                "Content-Type: application/json",
-                "X-goog-api-key: " . GEMINI_API_KEY
-            ],
-            'method' => 'POST',
-            'content' => json_encode($data)
-        ]
-    ];
-
-    $context = stream_context_create($options);
-    $response = file_get_contents('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', false, $context);
-    
-    if ($response === false) {
-        return "متأسفانه در حال حاضر امکان ترجمه وجود ندارد. لطفاً بعداً تلاش کنید.";
+// Get Persian challenge content
+function getPersianChallenge($day) {
+    $fa_challenge = getFaChallenge($day);
+    if (!$fa_challenge) {
+        return "متأسفانه این چالش به فارسی موجود نیست.";
     }
     
-    $result = json_decode($response, true);
+    $message = "*{$fa_challenge['title']}*\n\n";
+    $message .= $fa_challenge['description'] . "\n\n";
+    $message .= "💭 *سؤال:* " . $fa_challenge['prompt'];
     
-    if (isset($result['candidates'][0]['content']['parts'][0]['text'])) {
-        return trim($result['candidates'][0]['content']['parts'][0]['text']);
-    }
-    
-    return "متأسفانه در حال حاضر امکان ترجمه وجود ندارد. لطفاً بعداً تلاش کنید.";
+    return $message;
 }
 
 // Generate AI coaching response using Gemini API
@@ -455,23 +418,20 @@ if (isset($update['callback_query'])) {
     // Handle translate to Persian
     elseif (strpos($data, 'translate_fa_') === 0) {
         $day = intval(str_replace('translate_fa_', '', $data));
-        $challenge = getChallenge($day);
         
-        if ($challenge) {
-            $persian_translation = translateChallengeToPersian($challenge);
-            
-            $message = "*📝 توضیح به فارسی - روز {$day}*\n\n";
-            $message .= $persian_translation . "\n\n";
-            $message .= "_برای پاسخ دادن، متن خود را تایپ کنید. می‌توانید به فارسی یا انگلیسی پاسخ دهید._";
-            
-            $keyboard = [
-                'inline_keyboard' => [
-                    [['text' => '🔙 Back to English', 'callback_data' => "view_day_{$day}"]]
-                ]
-            ];
-            
-            sendMessage($chat_id, $message, $keyboard);
-        }
+        $persian_content = getPersianChallenge($day);
+        
+        $message = "*📝 توضیح به فارسی - روز {$day}*\n\n";
+        $message .= $persian_content . "\n\n";
+        $message .= "_برای پاسخ دادن، متن خود را تایپ کنید. می‌توانید به فارسی یا انگلیسی پاسخ دهید._";
+        
+        $keyboard = [
+            'inline_keyboard' => [
+                [['text' => '🔙 Back to English', 'callback_data' => "view_day_{$day}"]]
+            ]
+        ];
+        
+        sendMessage($chat_id, $message, $keyboard);
         
         file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
     }
@@ -512,7 +472,7 @@ if (isset($update['callback_query'])) {
             sendMessage($chat_id, $view_message, $keyboard);
         } else {
             // Show challenge and let user complete it
-            $challenge_message = formatChallengeMessage($day, $challenge, $user['name'], $chat_id);
+            formatChallengeMessage($day, $challenge, $user['name'], $chat_id);
             
             $keyboard = [
                 'inline_keyboard' => [
