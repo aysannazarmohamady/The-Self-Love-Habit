@@ -1,7 +1,7 @@
 <?php
 // cron.php - Simple reminder system with debugging
 define('BOT_TOKEN', '');
-define('DATA_FILE', '/home/jetncpan/public_html/selflove/users.json');
+define('DATA_FILE', '');
 
 
 // Enable error reporting
