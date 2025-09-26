@@ -3,11 +3,52 @@
 define('BOT_TOKEN', '');
 define('DATA_FILE', '/home/jetncpan/public_html/selflove/users.json');
 
+
 // Enable error reporting
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Send message function
+// Multiple message variations
+function getRandomMessage() {
+    $current_hour = (int)date('H');
+    
+    if ($current_hour >= 6 && $current_hour <= 12) {
+        // Morning messages (6 AM to 12 PM)
+        $morning_messages = [
+            "*Good morning superstar!* ☀️\n\nReady to conquer today's confidence challenge? You've got this! 💪\n\nRemember: Every brave step makes you stronger! ✨",
+            
+            "*Rise and shine!* 🌅\n\nYour confidence journey continues today! What amazing thing will you do? 🚀\n\nSmall actions = Big transformations! 💫",
+            
+            "*Hey champion!* 🏆\n\nTime for your daily dose of courage! Your future self will thank you 💝\n\nToday's challenge is waiting for you! 🎯",
+            
+            "*Morning motivation coming your way!* ⚡\n\nAnother day, another chance to grow stronger! 🌱\n\nYour confidence challenge is ready when you are! 💎",
+            
+            "*Hello beautiful soul!* 🌸\n\nDon't forget your confidence boost today! You deserve to feel amazing 👑\n\nEvery step forward counts! 🦋"
+        ];
+        
+        return $morning_messages[array_rand($morning_messages)];
+        
+    } else {
+        // Evening messages (rest of the day)
+        $evening_messages = [
+            "*Hey there!* 🌙\n\nHow's your confidence challenge going today? 🤔\n\nEven tiny steps create powerful changes! Keep going! 💪",
+            
+            "*Gentle reminder!* 🔔\n\nHave you tackled today's challenge yet? 🎯\n\nIt's never too late to do something brave! ✨",
+            
+            "*Check-in time!* ⏰\n\nYour confidence is calling! Have you answered? 📞\n\nConsistency builds unstoppable confidence! 🚀",
+            
+            "*Sweet reminder!* 🍯\n\nToday's challenge is still waiting for you! 😊\n\nProgress over perfection - always! 🌟",
+            
+            "*Friendly nudge!* 👋\n\nRemember your confidence goal today? 🎪\n\nEvery moment is a new chance to grow! 🌱",
+            
+            "*Evening check!* 🌆\n\nDid you show up for yourself today? 💖\n\nThere's still time to make it happen! ⭐"
+        ];
+        
+        return $evening_messages[array_rand($evening_messages)];
+    }
+}
+
+// Send message function (unchanged)
 function sendMessage($chat_id, $text) {
     $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/sendMessage";
     $data = [
@@ -45,7 +86,7 @@ function sendMessage($chat_id, $text) {
     }
 }
 
-// Load users
+// Load users (unchanged)
 function loadUsers() {
     echo "Loading users from: " . DATA_FILE . "\n";
     
@@ -70,7 +111,7 @@ function loadUsers() {
     return $users;
 }
 
-// Send reminder to all users
+// Send reminder to all users with random messages
 function sendReminders() {
     $users = loadUsers();
     $sent_count = 0;
@@ -83,15 +124,7 @@ function sendReminders() {
         return ['sent' => 0, 'failed' => 0, 'skipped' => 0];
     }
     
-    // Different message based on time
-    if ($current_hour >= 6 && $current_hour <= 12) {
-        $reminder_message = "*Hey!* \n\nDon't forget to complete your confidence challenge today! ðŸ’ª\n\nEvery small step counts towards building a more confident you! âœ¨";
-        $reminder_type = "Morning";
-    } else {
-        $reminder_message = "*Honey!* \n\nHave you completed your confidence challenge today? ðŸ¤”\n\nIf not, there's still time! Consistency is key to building lasting confidence. ðŸŒŸ";
-        $reminder_type = "Evening";
-    }
-    
+    $reminder_type = ($current_hour >= 6 && $current_hour <= 12) ? "Morning" : "Evening";
     echo "\n=== Processing Users for $reminder_type Reminders ===\n";
     
     foreach ($users as $user_id => $user) {
@@ -124,7 +157,10 @@ function sendReminders() {
         
         echo "SENDING: All conditions met\n";
         
-        if (sendMessage($user['chat_id'], $reminder_message)) {
+        // Get a random message for this user
+        $random_message = getRandomMessage();
+        
+        if (sendMessage($user['chat_id'], $random_message)) {
             $sent_count++;
         } else {
             $failed_count++;
@@ -147,7 +183,7 @@ function sendReminders() {
     return ['sent' => $sent_count, 'failed' => $failed_count, 'skipped' => $skipped_count];
 }
 
-// Main execution
+// Main execution (unchanged)
 echo "=== CRON JOB STARTED ===\n";
 echo "Time: " . date('Y-m-d H:i:s') . "\n";
 echo "Hour: " . date('H') . "\n";
