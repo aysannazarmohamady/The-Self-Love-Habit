@@ -4,7 +4,6 @@ define('BOT_TOKEN', '');
 define('GEMINI_API_KEY', '');
 define('DATA_FILE', 'users.json');
 
-// index.php
 // Include challenges data
 require_once 'challenges.php';
 require_once 'challenges_fa.php';
@@ -85,33 +84,41 @@ function getPersianChallenge($day) {
 // Generate AI coaching response using Gemini API
 function generateCoachingResponse($challenge_title, $user_response, $language = 'en') {
     if ($language == 'fa') {
-        $prompt = "شما یک مربی اعتماد به نفس حرفه‌ای هستید که به شخصی پاسخ می‌دهید که تازه چالش روزانه اعتماد به نفس را تکمیل کرده است.
+        $prompt = "شما یک مربی اعتماد به نفس حرفه‌ای و همدل هستید که به شخصی پاسخ می‌دهید که تازه چالش روزانه اعتماد به نفس را تکمیل کرده است.
 
 چالش: \"{$challenge_title}\"
 پاسخ کاربر: \"{$user_response}\"
 
-یک پاسخ کوتاه، قدرت‌بخش و حمایتی بنویسید (حداکثر 2-3 جمله) که:
-- تلاش و شجاعت آنها را تأیید کند
-- تجربه‌شان را ارزشمند بداند
-- آنها را به ادامه رشد تشویق کند
-- شخصی و صادق باشد
-- لحن گرم و حرفه‌ای داشته باشد
+ابتدا پاسخ کاربر را با دقت بخوانید و به احساس، لحن و محتوای آن توجه کنید:
+- اگر پاسخ مثبت و پرانرژی است، آن را جشن بگیرید
+- اگر پاسخ با تردید یا چالش همراه است، همدلی نشان دهید
+- اگر پاسخ کوتاه یا ساده است، آن را تأیید کنید بدون قضاوت
 
-آن را مختصر اما تأثیرگذار نگه دارید. بدون تعارف کلیشه‌ای - آن را اصیل حس کنید.";
+یک پاسخ کوتاه (2-3 جمله) بنویسید که:
+1. اول، به محتوای خاص پاسخشان واکنش نشان دهید (نه تعریف کلی!)
+2. اگر نیاز به راهنمایی یا نکته‌ای دارند، فقط یک جمله مختصر اضافه کنید
+3. لحن شما باید با لحن پاسخ کاربر هماهنگ باشد
+
+مهم: از کلمات و مفاهیمی که خود کاربر استفاده کرده بازتاب دهید. پاسخ را شخصی‌سازی کنید نه عمومی.
+بدون تعارف کلیشه‌ای - آن را اصیل و نزدیک به احساس کاربر حس کنید.";
     } else {
-        $prompt = "You are a professional confidence coach responding to someone who just completed a daily self-confidence challenge.
+        $prompt = "You are a professional, empathetic confidence coach responding to someone who just completed a daily self-confidence challenge.
 
 Challenge: \"{$challenge_title}\"
 User's response: \"{$user_response}\"
 
-Write a short, empowering, and supportive response (2-3 sentences max) that:
-- Acknowledges their effort and courage
-- Validates their experience 
-- Encourages continued growth
-- Feels personal and genuine
-- Uses a warm, professional coaching tone
+First, carefully read their response and notice the emotion, tone, and content:
+- If their response is positive and energetic, celebrate with them
+- If their response shows doubt or struggle, show empathy
+- If their response is brief or simple, validate it without judgment
 
-Keep it concise but impactful. No generic praise - make it feel authentic.";
+Write a short response (2-3 sentences) that:
+1. First, react specifically to THEIR response content (not generic praise!)
+2. If they need guidance or a helpful tip, add just ONE brief sentence
+3. Your tone should match the tone of their response
+
+Important: Mirror back words and concepts THEY used. Make it personal, not generic.
+No cookie-cutter praise - make it feel authentic and closely aligned with their emotion.";
     }
 
     $data = [
