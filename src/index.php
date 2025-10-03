@@ -81,6 +81,16 @@ function getPersianChallenge($day) {
     return $message;
 }
 
+// Get Persian gratitude prompt
+function getPersianGratitudePrompt() {
+    $message = "*🙏 لحظه‌ای برای شکرگزاری*\n\n";
+    $message .= "یک چیزی که الان ازش ممنونی چیه?\n\n";
+    $message .= "می‌تونه بزرگ یا کوچیک باشه - سلامتیت، یه نفر، یه لحظه، هر چیزی که گرما به قلبت می‌ده.\n\n";
+    $message .= "_با من به اشتراک بذار:_";
+    
+    return $message;
+}
+
 // Generate AI coaching response using Gemini API
 function generateCoachingResponse($challenge_title, $user_response, $language = 'en') {
     if ($language == 'fa') {
@@ -167,7 +177,8 @@ function getMainKeyboard() {
     return [
         'keyboard' => [
             [['text' => '📊 My Progress'], ['text' => '📅 All Days']],
-            [['text' => '🎯 Today\'s Challenge'], ['text' => '❓ Help']]
+            [['text' => '🎯 Today\'s Challenge'], ['text' => '🙏 Daily Gratitude']],
+            [['text' => '❓ Help']]
         ],
         'resize_keyboard' => true,
         'persistent' => true
@@ -364,7 +375,7 @@ function formatChallengeMessage($day, $challenge, $user_name, $chat_id) {
     // Add inline keyboard with Persian translation option
     $keyboard = [
         'inline_keyboard' => [
-            [['text' => '🇮🇷 توضیح به فارسی', 'callback_data' => "translate_fa_{$day}"]]
+            [['text' => 'توضیح به فارسی', 'callback_data' => "translate_fa_{$day}"]]
         ]
     ];
     
@@ -422,7 +433,7 @@ if (isset($update['callback_query'])) {
         
         file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
     }
-    // Handle translate to Persian
+    // Handle translate to Persian for challenges
     elseif (strpos($data, 'translate_fa_') === 0) {
         $day = intval(str_replace('translate_fa_', '', $data));
         
@@ -439,6 +450,47 @@ if (isset($update['callback_query'])) {
         ];
         
         sendMessage($chat_id, $message, $keyboard);
+        
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
+    // Handle translate to Persian for gratitude
+    elseif ($data == 'gratitude_fa') {
+        $persian_gratitude = getPersianGratitudePrompt();
+        
+        $keyboard = [
+            'inline_keyboard' => [
+                [['text' => '🔙 Back to English', 'callback_data' => 'gratitude_en']]
+            ]
+        ];
+        
+        sendMessage($chat_id, $persian_gratitude, $keyboard);
+        
+        saveUser($user_id, array_merge($user, [
+            'step' => 'gratitude_active',
+            'last_activity' => date('Y-m-d H:i:s')
+        ]));
+        
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
+    // Handle back to English for gratitude
+    elseif ($data == 'gratitude_en') {
+        $gratitude_prompt = "*🙏 Take a moment for gratitude*\n\n";
+        $gratitude_prompt .= "What's ONE thing you're grateful for right now?\n\n";
+        $gratitude_prompt .= "It can be big or small - your health, a person, a moment, anything that brings warmth to your heart.\n\n";
+        $gratitude_prompt .= "_Share it with me:_";
+        
+        $keyboard = [
+            'inline_keyboard' => [
+                [['text' => 'توضیح به فارسی', 'callback_data' => 'gratitude_fa']]
+            ]
+        ];
+        
+        sendMessage($chat_id, $gratitude_prompt, $keyboard);
+        
+        saveUser($user_id, array_merge($user, [
+            'step' => 'gratitude_active',
+            'last_activity' => date('Y-m-d H:i:s')
+        ]));
         
         file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
     }
@@ -612,11 +664,32 @@ if (isset($update['message'])) {
                 }
                 break;
                 
+            case '🙏 Daily Gratitude':
+                $gratitude_prompt = "*🙏 Take a moment for gratitude*\n\n";
+                $gratitude_prompt .= "What's ONE thing you're grateful for right now?\n\n";
+                $gratitude_prompt .= "It can be big or small - your health, a person, a moment, anything that brings warmth to your heart.\n\n";
+                $gratitude_prompt .= "_Share it with me:_";
+                
+                $keyboard = [
+                    'inline_keyboard' => [
+                        [['text' => 'توضیح به فارسی', 'callback_data' => 'gratitude_fa']]
+                    ]
+                ];
+                
+                sendMessage($chat_id, $gratitude_prompt, $keyboard);
+                
+                saveUser($user_id, array_merge($user, [
+                    'step' => 'gratitude_active',
+                    'last_activity' => date('Y-m-d H:i:s')
+                ]));
+                break;
+                
             case '❓ Help':
                 $help_text = "*🆘 How to Use This Bot*\n\n";
                 $help_text .= "*📊 My Progress* - View your journey overview, points, and completion percentage\n\n";
                 $help_text .= "*📅 All Days* - See all 30 days with status indicators. Tap any day to view or edit your response\n\n";
                 $help_text .= "*🎯 Today's Challenge* - Get your current day's challenge\n\n";
+                $help_text .= "*🙏 Daily Gratitude* - Practice gratitude anytime you want\n\n";
                 $help_text .= "*Day Status Indicators:*\n";
                 $help_text .= "✅ = Completed\n";
                 $help_text .= "⭕ = Available to complete\n";
@@ -632,7 +705,41 @@ if (isset($update['message'])) {
                 if (preg_match('/^day_(\d+)_active$/', $user['step'], $matches)) {
                     $day = intval($matches[1]);
                     handleChallengeResponse($user_id, $user, $day, $text);
-                } elseif (preg_match('/^edit_day_(\d+)$/', $user['step'], $matches)) {
+                } 
+                // Handle gratitude responses
+                elseif ($user['step'] == 'gratitude_active') {
+                    $gratitude_text = trim($text);
+                    
+                    if (strlen($gratitude_text) >= 3) {
+                        $response_language = detectLanguage($gratitude_text);
+                        
+                        // Generate AI response for gratitude
+                        $ai_gratitude = generateCoachingResponse("Daily Gratitude Practice", $gratitude_text, $response_language);
+                        
+                        if ($response_language == 'fa') {
+                            $thank_message = "*{$ai_gratitude}*\n\n";
+                            $thank_message .= "💚 شکرگزاری یک تمرین قدرتمند است - ممنون که این لحظه رو با من به اشتراک گذاشتی!";
+                        } else {
+                            $thank_message = "*{$ai_gratitude}*\n\n";
+                            $thank_message .= "💚 Gratitude is a powerful practice - thank you for sharing this moment with me!";
+                        }
+                        
+                        sendMessage($chat_id, $thank_message, getMainKeyboard());
+                        
+                        saveUser($user_id, array_merge($user, [
+                            'step' => 'waiting_for_next_day',
+                            'last_activity' => date('Y-m-d H:i:s')
+                        ]));
+                    } else {
+                        $response_language = detectLanguage($gratitude_text);
+                        if ($response_language == 'fa') {
+                            sendMessage($chat_id, "لطفاً یک پاسخ با حداقل ۳ کاراکتر بنویسید. 😊");
+                        } else {
+                            sendMessage($chat_id, "Please provide a response with at least 3 characters. 😊");
+                        }
+                    }
+                }
+                elseif (preg_match('/^edit_day_(\d+)$/', $user['step'], $matches)) {
                     $day = intval($matches[1]);
                     $new_response = trim($text);
                     
