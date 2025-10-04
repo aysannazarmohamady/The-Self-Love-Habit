@@ -1,7 +1,7 @@
 <?php
 // gratitude_reminder.php - Gratitude practice reminder system
-define('BOT_TOKEN', '8032308468:AAENEHClufdgLTlZpV828UdHE6Q0DUrqBlI');
-define('DATA_FILE', '/home/jetncpan/public_html/selflove/users.json');
+define('BOT_TOKEN', '');
+define('DATA_FILE', '');
 
 // Enable error reporting
 error_reporting(E_ALL);
@@ -180,4 +180,5 @@ $logMessage = "[" . date('Y-m-d H:i:s') . "] Gratitude reminder executed - Sent:
 file_put_contents('/home/jetncpan/public_html/selflove/gratitude_cron_log.txt', $logMessage, FILE_APPEND);
 
 echo "=== END ===\n";
+
 ?>
