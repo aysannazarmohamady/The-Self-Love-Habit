@@ -1,54 +1,64 @@
 <?php
-// cron.php - Simple reminder system with debugging
+// gratitude_reminder.php - Multilingual gratitude practice reminder system
 define('BOT_TOKEN', '');
 define('DATA_FILE', '');
-
 
 // Enable error reporting
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Multiple message variations
-function getRandomMessage() {
-    $current_hour = (int)date('H');
-    
-    if ($current_hour >= 6 && $current_hour <= 12) {
-        // Morning messages (6 AM to 12 PM)
-        $morning_messages = [
-            "*Good morning superstar!* ☀️\n\nReady to conquer today's confidence challenge? You've got this! 💪\n\nRemember: Every brave step makes you stronger! ✨",
-            
-            "*Rise and shine!* 🌅\n\nYour confidence journey continues today! What amazing thing will you do? 🚀\n\nSmall actions = Big transformations! 💫",
-            
-            "*Hey champion!* 🏆\n\nTime for your daily dose of courage! Your future self will thank you 💝\n\nToday's challenge is waiting for you! 🎯",
-            
-            "*Morning motivation coming your way!* ⚡\n\nAnother day, another chance to grow stronger! 🌱\n\nYour confidence challenge is ready when you are! 💎",
-            
-            "*Hello beautiful soul!* 🌸\n\nDon't forget your confidence boost today! You deserve to feel amazing 👑\n\nEvery step forward counts! 🦋"
-        ];
-        
-        return $morning_messages[array_rand($morning_messages)];
-        
-    } else {
-        // Evening messages (rest of the day)
-        $evening_messages = [
-            "*Hey there!* 🌙\n\nHow's your confidence challenge going today? 🤔\n\nEven tiny steps create powerful changes! Keep going! 💪",
-            
-            "*Gentle reminder!* 🔔\n\nHave you tackled today's challenge yet? 🎯\n\nIt's never too late to do something brave! ✨",
-            
-            "*Check-in time!* ⏰\n\nYour confidence is calling! Have you answered? 📞\n\nConsistency builds unstoppable confidence! 🚀",
-            
-            "*Sweet reminder!* 🍯\n\nToday's challenge is still waiting for you! 😊\n\nProgress over perfection - always! 🌟",
-            
-            "*Friendly nudge!* 👋\n\nRemember your confidence goal today? 🎪\n\nEvery moment is a new chance to grow! 🌱",
-            
-            "*Evening check!* 🌆\n\nDid you show up for yourself today? 💖\n\nThere's still time to make it happen! ⭐"
-        ];
-        
-        return $evening_messages[array_rand($evening_messages)];
+// Get user's language
+function getUserLanguage($user) {
+    if (isset($user['language']) && in_array($user['language'], ['en', 'fa'])) {
+        return $user['language'];
     }
+    return 'en'; // Default
 }
 
-// Send message function (unchanged)
+// Gratitude reminder messages
+function getRandomGratitudeMessage($lang = 'en') {
+    if ($lang === 'fa') {
+        $gratitude_messages = [
+            "*🙏 لحظه‌ای برای شکرگزاری*\n\nچه چیز خوبی الان در زندگیت هست?\n\nدکمه *🙏 شکرگزاری روزانه* در منو رو بزن تا یک چیز که امروز ازش ممنونی رو به اشتراک بذاری! 💚",
+            
+            "*✨ لحظه شکرگزاری*\n\nحتی در روزهای سخت، همیشه چیزی هست که قدردانش کنی.\n\nاز دکمه *🙏 شکرگزاری روزانه* برای تمرین این عادت قدرتمند استفاده کن! 🌟",
+            
+            "*👍 چک سریع شکرگزاری*\n\n30 ثانیه وقت بذار و به یک چیز که امروز باعث لبخندت شد فکر کن.\n\nاز طریق *🙏 شکرگزاری روزانه* در منو با من به اشتراک بذار! ☺️",
+            
+            "*🌟 یادآوری شکرگزاری*\n\nعلم نشون می‌ده شکرگزاری مغزت رو برای شادی بازسیم‌کشی می‌کنه!\n\nالان امتحان کن - *🙏 شکرگزاری روزانه* زیر رو بزن! 💫",
+            
+            "*🦋 لحظه‌ای برای قدردانی*\n\nیک شادی کوچک امروز چی بود?\n\nاز طریق دکمه *🙏 شکرگزاری روزانه* در منوت به اشتراک بذار! 💚",
+            
+            "*💚 تمرین شکرگزاری*\n\nتمرکز روی چیزهای خوب، چیزهای بیشتر خوب رو به زندگیت جذب می‌کنه.\n\n*🙏 شکرگزاری روزانه* رو بزن تا چیزی که ازش ممنونی رو به اشتراک بذاری! ✨",
+            
+            "*🌸 وقت سپاسگزاری*\n\nسلامتیت؟ یه نفر؟ یه لحظه؟ چی گرما به قلبت می‌ده?\n\nاز *🙏 شکرگزاری روزانه* در منو برای ابراز استفاده کن! 🙏",
+            
+            "*⭐ استراحت شکرگزاری*\n\nحتی لیست کردن یک چیز که ازش ممنونی می‌تونه کل حالت رو عوض کنه!\n\nامتحان کن - *🙏 شکرگزاری روزانه* زیر رو بزن! 💗"
+        ];
+    } else {
+        $gratitude_messages = [
+            "*🙏 Pause for gratitude*\n\nWhat's something good in your life right now?\n\nTap *🙏 Daily Gratitude* in the menu to share one thing you're grateful for today! 💚",
+            
+            "*✨ Gratitude moment*\n\nEven on tough days, there's always something to appreciate.\n\nUse *🙏 Daily Gratitude* button to practice this powerful habit! 🌟",
+            
+            "*👍 Quick gratitude check*\n\nTake 30 seconds to think of one thing that made you smile today.\n\nShare it with me using *🙏 Daily Gratitude* in the menu! ☺️",
+            
+            "*🌟 Gratitude reminder*\n\nScience shows gratitude rewires your brain for happiness!\n\nTry it now - tap *🙏 Daily Gratitude* below! 💫",
+            
+            "*🦋 A moment to appreciate*\n\nWhat's one small joy from today?\n\nShare it using the *🙏 Daily Gratitude* button in your menu! 💚",
+            
+            "*💚 Gratitude practice*\n\nFocusing on what's good attracts more good into your life.\n\nTap *🙏 Daily Gratitude* to share what you're thankful for! ✨",
+            
+            "*🌸 Time for thankfulness*\n\nYour health? A person? A moment? What brings warmth to your heart?\n\nUse *🙏 Daily Gratitude* in the menu to express it! 🙏",
+            
+            "*⭐ Gratitude break*\n\nEven listing one thing you're grateful for can shift your whole mood!\n\nTry it - tap *🙏 Daily Gratitude* below! 💗"
+        ];
+    }
+    
+    return $gratitude_messages[array_rand($gratitude_messages)];
+}
+
+// Send message function
 function sendMessage($chat_id, $text) {
     $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/sendMessage";
     $data = [
@@ -86,7 +96,7 @@ function sendMessage($chat_id, $text) {
     }
 }
 
-// Load users (unchanged)
+// Load users
 function loadUsers() {
     echo "Loading users from: " . DATA_FILE . "\n";
     
@@ -111,25 +121,24 @@ function loadUsers() {
     return $users;
 }
 
-// Send reminder to all users with random messages
-function sendReminders() {
+// Send gratitude reminders
+function sendGratitudeReminders() {
     $users = loadUsers();
     $sent_count = 0;
     $failed_count = 0;
     $skipped_count = 0;
-    $current_hour = (int)date('H');
     
     if (empty($users)) {
         echo "No users found!\n";
         return ['sent' => 0, 'failed' => 0, 'skipped' => 0];
     }
     
-    $reminder_type = ($current_hour >= 6 && $current_hour <= 12) ? "Morning" : "Evening";
-    echo "\n=== Processing Users for $reminder_type Reminders ===\n";
+    echo "\n=== Processing Users for Gratitude Reminders ===\n";
     
     foreach ($users as $user_id => $user) {
         echo "\n--- User ID: $user_id ---\n";
         echo "Name: " . ($user['name'] ?? 'N/A') . "\n";
+        echo "Language: " . ($user['language'] ?? 'not set') . "\n";
         echo "Step: " . ($user['step'] ?? 'N/A') . "\n";
         echo "Start Date: " . ($user['start_date'] ?? 'N/A') . "\n";
         echo "Chat ID: " . ($user['chat_id'] ?? 'N/A') . "\n";
@@ -148,7 +157,7 @@ function sendReminders() {
         }
         
         // Skip users who haven't properly started
-        $skip_steps = ['postponed', 'waiting_for_name', 'waiting_for_start'];
+        $skip_steps = ['postponed', 'waiting_for_name', 'waiting_for_start', 'waiting_for_language'];
         if (isset($user['step']) && in_array($user['step'], $skip_steps)) {
             echo "SKIP: User step is " . $user['step'] . "\n";
             $skipped_count++;
@@ -157,8 +166,12 @@ function sendReminders() {
         
         echo "SENDING: All conditions met\n";
         
-        // Get a random message for this user
-        $random_message = getRandomMessage();
+        // Get user's language
+        $user_lang = getUserLanguage($user);
+        echo "Using language: $user_lang\n";
+        
+        // Get a random gratitude message in user's language
+        $random_message = getRandomGratitudeMessage($user_lang);
         
         if (sendMessage($user['chat_id'], $random_message)) {
             $sent_count++;
@@ -177,27 +190,27 @@ function sendReminders() {
     echo "Users skipped: $skipped_count\n";
     
     // Log the operation
-    $log_message = date('Y-m-d H:i:s') . " - {$reminder_type} reminders: {$sent_count} sent, {$failed_count} failed, {$skipped_count} skipped\n";
-    file_put_contents('/home/jetncpan/public_html/selflove/reminder_log.txt', $log_message, FILE_APPEND);
+    $log_message = date('Y-m-d H:i:s') . " - Gratitude reminders: {$sent_count} sent, {$failed_count} failed, {$skipped_count} skipped\n";
+    file_put_contents('/home/jetncpan/public_html/selflove/gratitude_reminder_log.txt', $log_message, FILE_APPEND);
     
     return ['sent' => $sent_count, 'failed' => $failed_count, 'skipped' => $skipped_count];
 }
 
-// Main execution (unchanged)
-echo "=== CRON JOB STARTED ===\n";
+// Main execution
+echo "=== GRATITUDE REMINDER CRON JOB STARTED ===\n";
 echo "Time: " . date('Y-m-d H:i:s') . "\n";
 echo "Hour: " . date('H') . "\n";
 echo "PHP Version: " . PHP_VERSION . "\n";
 echo "Working Directory: " . getcwd() . "\n";
 
-$result = sendReminders();
+$result = sendGratitudeReminders();
 
-echo "\n=== CRON JOB COMPLETED ===\n";
+echo "\n=== GRATITUDE REMINDER CRON JOB COMPLETED ===\n";
 echo "Final Results: {$result['sent']} sent, {$result['failed']} failed, {$result['skipped']} skipped\n";
 
 // Log execution
-$logMessage = "[" . date('Y-m-d H:i:s') . "] Cron executed - Sent: {$result['sent']}, Failed: {$result['failed']}, Skipped: {$result['skipped']}\n";
-file_put_contents('/home/jetncpan/public_html/selflove/cron_log.txt', $logMessage, FILE_APPEND);
+$logMessage = "[" . date('Y-m-d H:i:s') . "] Gratitude reminder executed - Sent: {$result['sent']}, Failed: {$result['failed']}, Skipped: {$result['skipped']}\n";
+file_put_contents('/home/jetncpan/public_html/selflove/gratitude_cron_log.txt', $logMessage, FILE_APPEND);
 
 echo "=== END ===\n";
 ?>
