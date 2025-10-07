@@ -1,12 +1,15 @@
 <?php
 // config.php
-define('BOT_TOKEN', '');
-define('GEMINI_API_KEY', '');
+define('BOT_TOKEN', '8032308468:AAENEHClufdgLTlZpV828UdHE6Q0DUrqBlI');
+define('GEMINI_API_KEY', 'AIzaSyBwFhDXRQsJqu8Go_tIzPfrmxyX2c5051o');
 define('DATA_FILE', 'users.json');
 
-// Include challenges data
+// Include all required files
 require_once 'challenges.php';
 require_once 'challenges_fa.php';
+require_once 'lang_en.php';
+require_once 'lang_fa.php';
+require_once 'translate.php';
 
 // Load users data from JSON
 function loadUsers() {
@@ -62,33 +65,8 @@ function sendMessage($chat_id, $text, $reply_markup = null) {
 
 // Detect language of text (simple Persian detection)
 function detectLanguage($text) {
-    // Simple Persian detection based on Persian characters
     $persian_pattern = '/[\x{0600}-\x{06FF}\x{0750}-\x{077F}\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u';
     return preg_match($persian_pattern, $text) ? 'fa' : 'en';
-}
-
-// Get Persian challenge content
-function getPersianChallenge($day) {
-    $fa_challenge = getFaChallenge($day);
-    if (!$fa_challenge) {
-        return "متأسفانه این چالش به فارسی موجود نیست.";
-    }
-    
-    $message = "*{$fa_challenge['title']}*\n\n";
-    $message .= $fa_challenge['description'] . "\n\n";
-    $message .= "💭 *سؤال:* " . $fa_challenge['prompt'];
-    
-    return $message;
-}
-
-// Get Persian gratitude prompt
-function getPersianGratitudePrompt() {
-    $message = "*🙏 لحظه‌ای برای شکرگزاری*\n\n";
-    $message .= "یک چیزی که الان ازش ممنونی چیه?\n\n";
-    $message .= "می‌تونه بزرگ یا کوچیک باشه - سلامتیت، یه نفر، یه لحظه، هر چیزی که گرما به قلبت می‌ده.\n\n";
-    $message .= "_با من به اشتراک بذار:_";
-    
-    return $message;
 }
 
 // Generate AI coaching response using Gemini API
@@ -172,19 +150,6 @@ No cookie-cutter praise - make it feel authentic and closely aligned with their 
         : "What an incredible step forward! Your willingness to share and grow takes real courage. You're building something amazing, one day at a time!";
 }
 
-// Get main keyboard menu
-function getMainKeyboard() {
-    return [
-        'keyboard' => [
-            [['text' => '📊 My Progress'], ['text' => '📅 All Days']],
-            [['text' => '🎯 Today\'s Challenge'], ['text' => '🙏 Daily Gratitude']],
-            [['text' => '❓ Help']]
-        ],
-        'resize_keyboard' => true,
-        'persistent' => true
-    ];
-}
-
 // Calculate user points
 function calculatePoints($user) {
     $points = 0;
@@ -217,84 +182,10 @@ function getUserProgress($user) {
     ];
 }
 
-// Generate progress report
-function generateProgressReport($user) {
-    $progress = getUserProgress($user);
-    $points = calculatePoints($user);
-    
-    $message = "*🌟 {$user['name']}'s Confidence Journey 🌟*\n\n";
-    $message .= "📊 *Progress:* {$progress['completed']}/30 days ({$progress['percentage']}%)\n";
-    $message .= "🏆 *Total Points:* {$points}\n";
-    $message .= "📅 *Started:* " . ($user['start_date'] ?? 'Not started') . "\n\n";
-    
-    // Progress bar
-    $completed = $progress['completed'];
-    $bar_length = 20;
-    $filled = round(($completed / 30) * $bar_length);
-    $empty = $bar_length - $filled;
-    $progress_bar = str_repeat('🟩', $filled) . str_repeat('⬜', $empty);
-    $message .= "Progress: {$progress_bar}\n\n";
-    
-    if ($completed > 0) {
-        $message .= "Keep up the amazing work! 🚀\n";
-    } else {
-        $message .= "Ready to start your journey? 💪\n";
-    }
-    
-    $message .= "\nUse '📅 All Days' to see and edit your responses!";
-    
-    return $message;
-}
-
-// Generate all days view
-function generateAllDaysView($user) {
-    $completed_days = $user['completed_days'] ?? [];
-    $current_day = $user['current_day'] ?? 1;
-    
-    $message = "*📅 Your 30-Day Challenge Overview*\n\n";
-    
-    // Create inline keyboard with all days
-    $buttons = [];
-    $row = [];
-    
-    for ($day = 1; $day <= 30; $day++) {
-        $is_completed = isset($completed_days[$day]) && $completed_days[$day]['completed'];
-        $is_available = $day <= $current_day;
-        
-        if ($is_completed) {
-            $status = '✅';
-        } elseif ($is_available) {
-            $status = '⭕';
-        } else {
-            $status = '🔒';
-        }
-        
-        $button_text = "Day {$day} {$status}";
-        $callback_data = $is_available ? "view_day_{$day}" : "locked_day_{$day}";
-        
-        $row[] = ['text' => $button_text, 'callback_data' => $callback_data];
-        
-        if (count($row) == 3) {
-            $buttons[] = $row;
-            $row = [];
-        }
-    }
-    
-    if (!empty($row)) {
-        $buttons[] = $row;
-    }
-    
-    $keyboard = ['inline_keyboard' => $buttons];
-    
-    $message .= "✅ = Completed | ⭕ = Available | 🔒 = Locked\n\n";
-    $message .= "Tap any available day to view or edit your response!";
-    
-    return [$message, $keyboard];
-}
-
 // Handle active challenge response
 function handleChallengeResponse($user_id, $user, $day, $text) {
     $response = trim($text);
+    $lang = getUserLanguage($user);
     
     if (strlen($response) >= 3) {
         // Detect language of response
@@ -310,7 +201,8 @@ function handleChallengeResponse($user_id, $user, $day, $text) {
         ];
         
         // Get challenge title for AI response
-        $challenge = getChallenge($day);
+        $challenge_data = getChallengeText($day, $lang);
+        $challenge = $challenge_data['challenge'];
         $challenge_title = $challenge ? $challenge['title'] : "Day {$day} Challenge";
         
         // Generate AI coaching response in appropriate language
@@ -318,17 +210,13 @@ function handleChallengeResponse($user_id, $user, $day, $text) {
         
         $points = calculatePoints(array_merge($user, ['completed_days' => $completed_days]));
         
-        if ($response_language == 'fa') {
-            $completion_message = "*{$user['name']}، {$ai_response}*\n\n";
-            $completion_message .= "*🎉 روز {$day} تکمیل شد!*\n\n";
-            $completion_message .= "🏆 *+10 امتیاز! مجموع: {$points} امتیاز*";
-        } else {
-            $completion_message = "*{$user['name']}, {$ai_response}*\n\n";
-            $completion_message .= "*🎉 Day {$day} Complete!*\n\n";
-            $completion_message .= "🏆 *+10 Points! Total: {$points} points*";
-        }
+        $completion_message = "*{$user['name']}, {$ai_response}*\n\n";
+        $completion_message .= t('challenge_completed', $response_language, [
+            'day' => $day,
+            'points' => $points
+        ]);
         
-        sendMessage($user['chat_id'], $completion_message, getMainKeyboard());
+        sendMessage($user['chat_id'], $completion_message, getMainKeyboard($lang));
         
         // Update user data
         $next_day = $day + 1;
@@ -341,8 +229,7 @@ function handleChallengeResponse($user_id, $user, $day, $text) {
         
         // If challenge is complete
         if ($day == 30) {
-            $final_message = "\n\n🎊 *INCREDIBLE! You've completed the entire 30-Day Challenge!* 🎊\n\n";
-            $final_message .= "You can still view and edit your responses anytime using '📅 All Days'!";
+            $final_message = t('final_message', $lang);
             sendMessage($user['chat_id'], $final_message);
         }
         
@@ -352,36 +239,6 @@ function handleChallengeResponse($user_id, $user, $day, $text) {
         sendMessage($user['chat_id'], $encourage_message);
         return false;
     }
-}
-
-// Calculate days since start
-function getDaysSinceStart($start_date) {
-    $start = new DateTime($start_date);
-    $today = new DateTime();
-    $interval = $start->diff($today);
-    return $interval->days + 1;
-}
-
-// Format challenge message with translation button
-function formatChallengeMessage($day, $challenge, $user_name, $chat_id) {
-    $message = "*🎉 Dear {$user_name}! Ready for today's adventure?*\n\n";
-    $message .= "━━━━━━━━━━━━━━━━━━━━━\n";
-    $message .= "*📅 DAY {$day}: {$challenge['title']}*\n";
-    $message .= "━━━━━━━━━━━━━━━━━━━━━\n\n";
-    $message .= $challenge['description'] . "\n\n";
-    $message .= "💡 *Why this works:* " . $challenge['why_it_works'] . "\n\n";
-    $message .= $challenge['prompt'];
-    
-    // Add inline keyboard with Persian translation option
-    $keyboard = [
-        'inline_keyboard' => [
-            [['text' => 'توضیح به فارسی', 'callback_data' => "translate_fa_{$day}"]]
-        ]
-    ];
-    
-    // Send message with keyboard
-    sendMessage($chat_id, $message, $keyboard);
-    return $message;
 }
 
 // Main webhook handler
@@ -396,17 +253,47 @@ if (isset($update['callback_query'])) {
     $data = $callback['data'];
     
     $user = getUser($user_id);
+    $lang = getUserLanguage($user);
+    
+    // Handle language selection
+    if ($data == 'set_lang_en' || $data == 'set_lang_fa') {
+        $selected_lang = ($data == 'set_lang_en') ? 'en' : 'fa';
+        
+        // Update user language
+        if ($user) {
+            $user['language'] = $selected_lang;
+            saveUser($user_id, $user);
+            
+            $message = t('language_set', $selected_lang);
+            sendMessage($chat_id, $message, getMainKeyboard($selected_lang));
+            
+            // If user hasn't started yet, continue with name or start process
+            if (!isset($user['start_date']) && isset($user['step']) && $user['step'] !== 'waiting_for_start') {
+                // They just selected language, continue flow
+                if ($user['step'] === 'waiting_for_language') {
+                    $welcome = t('welcome_description', $selected_lang);
+                    sendMessage($chat_id, $welcome);
+                    
+                    // Update step to waiting for name
+                    saveUser($user_id, array_merge($user, [
+                        'step' => 'waiting_for_name'
+                    ]));
+                }
+            }
+        }
+        
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+        exit;
+    }
     
     if ($data == 'start_now' && $user && $user['step'] == 'waiting_for_start') {
-        $start_text = "*🎉 Wonderful, {$user['name']}! Your journey begins now!*\n\n";
-        $start_text .= "Remember, I'm here as your trusted companion throughout this journey. Think of me as your personal confidence coach who's always here to listen, encourage, and celebrate your wins - big and small! 🤗\n\n";
-        $start_text .= "Let's dive into your first challenge...\n\n";
-        
-        // Get Day 1 challenge from external file
-        $challenge = getChallenge(1);
-        formatChallengeMessage(1, $challenge, $user['name'], $chat_id);
-        
+        $start_text = t('start_now', $lang, ['name' => $user['name']]);
         sendMessage($chat_id, $start_text);
+        
+        // Get Day 1 challenge
+        $challenge_data = getChallengeText(1, $lang);
+        $challenge = $challenge_data['challenge'];
+        formatChallengeMessageMultilang(1, $challenge, $user['name'], $chat_id, $lang);
         
         // Update user status to day 1 active
         saveUser($user_id, array_merge($user, [
@@ -420,11 +307,7 @@ if (isset($update['callback_query'])) {
         file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
     }
     elseif ($data == 'start_later' && $user && $user['step'] == 'waiting_for_start') {
-        $later_text = "*No problem at all, {$user['name']}! 😊*\n\n";
-        $later_text .= "Take your time - personal growth can't be rushed! When you're ready to begin your confidence journey, just type /start and I'll be here waiting for you.\n\n";
-        $later_text .= "Remember, the best time to plant a tree was 20 years ago. The second best time is now... whenever your 'now' feels right! 🌱\n\n";
-        $later_text .= "I'm excited to be part of your transformation when you're ready! ✨";
-        
+        $later_text = t('start_later', $lang, ['name' => $user['name']]);
         sendMessage($chat_id, $later_text);
         
         saveUser($user_id, array_merge($user, [
@@ -433,64 +316,18 @@ if (isset($update['callback_query'])) {
         
         file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
     }
-    // Handle translate to Persian for challenges
-    elseif (strpos($data, 'translate_fa_') === 0) {
-        $day = intval(str_replace('translate_fa_', '', $data));
+    // Handle translate buttons
+    elseif (strpos($data, 'translate_') === 0) {
+        $parts = explode('_', $data);
+        $target_lang = $parts[1]; // 'en' or 'fa'
+        $day = intval($parts[2]);
         
-        $persian_content = getPersianChallenge($day);
+        $challenge_data = getChallengeText($day, $target_lang);
+        $challenge = $challenge_data['challenge'];
         
-        $message = "*📝 توضیح به فارسی - روز {$day}*\n\n";
-        $message .= $persian_content . "\n\n";
-        $message .= "_برای پاسخ دادن، متن خود را تایپ کنید. می‌توانید به فارسی یا انگلیسی پاسخ دهید._";
-        
-        $keyboard = [
-            'inline_keyboard' => [
-                [['text' => '🔙 Back to English', 'callback_data' => "view_day_{$day}"]]
-            ]
-        ];
-        
-        sendMessage($chat_id, $message, $keyboard);
-        
-        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
-    }
-    // Handle translate to Persian for gratitude
-    elseif ($data == 'gratitude_fa') {
-        $persian_gratitude = getPersianGratitudePrompt();
-        
-        $keyboard = [
-            'inline_keyboard' => [
-                [['text' => '🔙 Back to English', 'callback_data' => 'gratitude_en']]
-            ]
-        ];
-        
-        sendMessage($chat_id, $persian_gratitude, $keyboard);
-        
-        saveUser($user_id, array_merge($user, [
-            'step' => 'gratitude_active',
-            'last_activity' => date('Y-m-d H:i:s')
-        ]));
-        
-        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
-    }
-    // Handle back to English for gratitude
-    elseif ($data == 'gratitude_en') {
-        $gratitude_prompt = "*🙏 Take a moment for gratitude*\n\n";
-        $gratitude_prompt .= "What's ONE thing you're grateful for right now?\n\n";
-        $gratitude_prompt .= "It can be big or small - your health, a person, a moment, anything that brings warmth to your heart.\n\n";
-        $gratitude_prompt .= "_Share it with me:_";
-        
-        $keyboard = [
-            'inline_keyboard' => [
-                [['text' => 'توضیح به فارسی', 'callback_data' => 'gratitude_fa']]
-            ]
-        ];
-        
-        sendMessage($chat_id, $gratitude_prompt, $keyboard);
-        
-        saveUser($user_id, array_merge($user, [
-            'step' => 'gratitude_active',
-            'last_activity' => date('Y-m-d H:i:s')
-        ]));
+        if ($challenge) {
+            formatChallengeMessageMultilang($day, $challenge, $user['name'], $chat_id, $target_lang);
+        }
         
         file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
     }
@@ -498,10 +335,11 @@ if (isset($update['callback_query'])) {
     elseif (strpos($data, 'view_day_') === 0) {
         $day = intval(str_replace('view_day_', '', $data));
         $completed_days = $user['completed_days'] ?? [];
-        $challenge = getChallenge($day);
+        $challenge_data = getChallengeText($day, $lang);
+        $challenge = $challenge_data['challenge'];
         
         if (!$challenge) {
-            file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id'] . "&text=Challenge not found!");
+            file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id'] . "&text=" . urlencode(t('challenge_not_found', $lang)));
             return;
         }
         
@@ -512,18 +350,18 @@ if (isset($update['callback_query'])) {
             $current_response = $completed_days[$day]['response'];
             $completed_at = $completed_days[$day]['completed_at'];
             
-            $view_message = "*📝 Day {$day}: {$challenge_title}*\n\n";
-            $view_message .= "*Status:* ✅ Completed\n";
-            $view_message .= "*Completed on:* " . date('M j, Y', strtotime($completed_at)) . "\n\n";
-            $view_message .= "*Your Response:*\n";
-            $view_message .= "_{$current_response}_\n\n";
-            $view_message .= "Would you like to edit your response?";
+            $view_message = t('day_view_completed', $lang, [
+                'day' => $day,
+                'title' => $challenge_title,
+                'date' => date('M j, Y', strtotime($completed_at)),
+                'response' => $current_response
+            ]);
             
             $keyboard = [
                 'inline_keyboard' => [
                     [
-                        ['text' => '✏️ Edit Response', 'callback_data' => "edit_day_{$day}"],
-                        ['text' => '🔙 Back to All Days', 'callback_data' => 'all_days']
+                        ['text' => t('btn_edit', $lang), 'callback_data' => "edit_day_{$day}"],
+                        ['text' => t('btn_back_all_days', $lang), 'callback_data' => 'all_days']
                     ]
                 ]
             ];
@@ -531,16 +369,16 @@ if (isset($update['callback_query'])) {
             sendMessage($chat_id, $view_message, $keyboard);
         } else {
             // Show challenge and let user complete it
-            formatChallengeMessage($day, $challenge, $user['name'], $chat_id);
+            formatChallengeMessageMultilang($day, $challenge, $user['name'], $chat_id, $lang);
             
             $keyboard = [
                 'inline_keyboard' => [
-                    [['text' => '🔙 Back to All Days', 'callback_data' => 'all_days']]
+                    [['text' => t('btn_back_all_days', $lang), 'callback_data' => 'all_days']]
                 ]
             ];
             
-            // Send message with only back button since formatChallengeMessage already sends the main message
-            sendMessage($chat_id, "_Type your response below or use the Persian translation button above._", $keyboard);
+            $response_hint = t('day_view_not_completed', $lang);
+            sendMessage($chat_id, $response_hint, $keyboard);
             
             // Set user to active for this day
             saveUser($user_id, array_merge($user, [
@@ -558,18 +396,19 @@ if (isset($update['callback_query'])) {
         
         if (isset($completed_days[$day]) && $completed_days[$day]['completed']) {
             $current_response = $completed_days[$day]['response'];
-            $challenge = getChallenge($day);
+            $challenge_data = getChallengeText($day, $lang);
+            $challenge = $challenge_data['challenge'];
             $challenge_title = $challenge ? $challenge['title'] : "Day {$day}";
             
-            $edit_message = "*✏️ Edit Your Response - Day {$day}*\n";
-            $edit_message .= "*Challenge:* {$challenge_title}\n\n";
-            $edit_message .= "*Your current response:*\n";
-            $edit_message .= "_{$current_response}_\n\n";
-            $edit_message .= "Please type your new response:";
+            $edit_message = t('edit_prompt', $lang, [
+                'day' => $day,
+                'title' => $challenge_title,
+                'response' => $current_response
+            ]);
             
             $keyboard = [
                 'inline_keyboard' => [
-                    [['text' => '❌ Cancel Edit', 'callback_data' => "view_day_{$day}"]]
+                    [['text' => t('btn_cancel_edit', $lang), 'callback_data' => "view_day_{$day}"]]
                 ]
             ];
             
@@ -586,14 +425,37 @@ if (isset($update['callback_query'])) {
     }
     // Handle all days button
     elseif ($data == 'all_days') {
-        list($message, $keyboard) = generateAllDaysView($user);
+        list($message, $keyboard) = generateAllDaysViewMultilang($user, $lang);
         sendMessage($chat_id, $message, $keyboard);
         file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
     }
     // Handle locked day
     elseif (strpos($data, 'locked_day_') === 0) {
         $day = intval(str_replace('locked_day_', '', $data));
-        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id'] . "&text=Day {$day} is not available yet! Complete previous days first.");
+        $error_msg = t('day_locked', $lang, ['day' => $day]);
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id'] . "&text=" . urlencode($error_msg));
+    }
+    // Handle gratitude language switch
+    elseif ($data == 'gratitude_fa' || $data == 'gratitude_en') {
+        $gratitude_lang = ($data == 'gratitude_fa') ? 'fa' : 'en';
+        $other_lang = ($gratitude_lang == 'fa') ? 'en' : 'fa';
+        
+        $gratitude_prompt = t('gratitude_prompt', $gratitude_lang);
+        
+        $keyboard = [
+            'inline_keyboard' => [
+                [['text' => t('btn_translate_' . $other_lang, $gratitude_lang), 'callback_data' => 'gratitude_' . $other_lang]]
+            ]
+        ];
+        
+        sendMessage($chat_id, $gratitude_prompt, $keyboard);
+        
+        saveUser($user_id, array_merge($user, [
+            'step' => 'gratitude_active',
+            'last_activity' => date('Y-m-d H:i:s')
+        ]));
+        
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
     }
 }
 
@@ -611,221 +473,197 @@ if (isset($update['message'])) {
     if ($text == '/start') {
         if ($user && isset($user['start_date'])) {
             // User already started challenge
-            $welcome_back = "*Welcome back, {$user['name']}! 🌟*\n\n";
-            $welcome_back .= "You're already on your confidence journey! Use the menu below to navigate:";
-            sendMessage($chat_id, $welcome_back, getMainKeyboard());
+            $lang = getUserLanguage($user);
+            $welcome_back = t('welcome_back', $lang, ['name' => $user['name']]);
+            sendMessage($chat_id, $welcome_back, getMainKeyboard($lang));
         } else {
-            $welcome_text = "*🌟 Welcome to the 30-Day Self-Confidence Challenge Bot! 🌟*\n\n";
-            $welcome_text .= "I'm here to guide you through a scientifically-backed journey to boost your self-confidence over the next 30 days.\n\n";
-            $welcome_text .= "This challenge is based on proven psychological principles and small daily actions that can make a big difference in how you see yourself.\n\n";
-            $welcome_text .= "To get started, please tell me your name:";
-            
-            sendMessage($chat_id, $welcome_text);
-            
-            saveUser($user_id, [
-                'chat_id' => $chat_id,
-                'first_name' => $first_name,
-                'step' => 'waiting_for_name',
-                'created_at' => date('Y-m-d H:i:s')
-            ]);
+            // New user or user who hasn't started - ask for language first
+            if (!$user || !isset($user['language'])) {
+                $language_prompt = t('choose_language', 'en'); // Show bilingual
+                sendMessage($chat_id, $language_prompt, getLanguageSelectionKeyboard());
+                
+                // Save user as waiting for language
+                saveUser($user_id, [
+                    'chat_id' => $chat_id,
+                    'first_name' => $first_name,
+                    'step' => 'waiting_for_language',
+                    'created_at' => date('Y-m-d H:i:s')
+                ]);
+            } else {
+                // User has language but hasn't started, ask for name
+                $lang = $user['language'];
+                $welcome_text = t('welcome_title', $lang) . "\n\n" . t('welcome_description', $lang);
+                sendMessage($chat_id, $welcome_text);
+                
+                saveUser($user_id, array_merge($user, [
+                    'step' => 'waiting_for_name'
+                ]));
+            }
         }
     }
     // Handle keyboard menu buttons
     elseif ($user && isset($user['start_date'])) {
-        switch ($text) {
-            case '📊 My Progress':
-                $report = generateProgressReport($user);
-                sendMessage($chat_id, $report, getMainKeyboard());
-                break;
-                
-            case '📅 All Days':
-                list($message, $keyboard) = generateAllDaysView($user);
-                sendMessage($chat_id, $message, $keyboard);
-                break;
-                
-            case '🎯 Today\'s Challenge':
-                $current_day = $user['current_day'] ?? 1;
-                $completed_days = $user['completed_days'] ?? [];
-                
-                if ($current_day > 30) {
-                    sendMessage($chat_id, "🎉 You've completed all 30 days! Congratulations! Use '📅 All Days' to review your journey.", getMainKeyboard());
-                } elseif (isset($completed_days[$current_day]) && $completed_days[$current_day]['completed']) {
-                    sendMessage($chat_id, "✅ You've already completed Day {$current_day}! Great job! Use '📅 All Days' to see other days.", getMainKeyboard());
-                } else {
-                    $challenge = getChallenge($current_day);
-                    if ($challenge) {
-                        formatChallengeMessage($current_day, $challenge, $user['name'], $chat_id);
-                        
-                        saveUser($user_id, array_merge($user, [
-                            'step' => "day_{$current_day}_active",
-                            'last_activity' => date('Y-m-d H:i:s')
-                        ]));
-                    }
-                }
-                break;
-                
-            case '🙏 Daily Gratitude':
-                $gratitude_prompt = "*🙏 Take a moment for gratitude*\n\n";
-                $gratitude_prompt .= "What's ONE thing you're grateful for right now?\n\n";
-                $gratitude_prompt .= "It can be big or small - your health, a person, a moment, anything that brings warmth to your heart.\n\n";
-                $gratitude_prompt .= "_Share it with me:_";
-                
-                $keyboard = [
-                    'inline_keyboard' => [
-                        [['text' => 'توضیح به فارسی', 'callback_data' => 'gratitude_fa']]
-                    ]
-                ];
-                
-                sendMessage($chat_id, $gratitude_prompt, $keyboard);
-                
-                saveUser($user_id, array_merge($user, [
-                    'step' => 'gratitude_active',
-                    'last_activity' => date('Y-m-d H:i:s')
-                ]));
-                break;
-                
-            case '❓ Help':
-                $help_text = "*🆘 How to Use This Bot*\n\n";
-                $help_text .= "*📊 My Progress* - View your journey overview, points, and completion percentage\n\n";
-                $help_text .= "*📅 All Days* - See all 30 days with status indicators. Tap any day to view or edit your response\n\n";
-                $help_text .= "*🎯 Today's Challenge* - Get your current day's challenge\n\n";
-                $help_text .= "*🙏 Daily Gratitude* - Practice gratitude anytime you want\n\n";
-                $help_text .= "*Day Status Indicators:*\n";
-                $help_text .= "✅ = Completed\n";
-                $help_text .= "⭕ = Available to complete\n";
-                $help_text .= "🔒 = Locked (complete previous days first)\n\n";
-                $help_text .= "*Privacy:* All your responses are encrypted and stored securely. Only you can see them!\n\n";
-                $help_text .= "Need more help? Contact the bot creator! 😊";
-                
-                sendMessage($chat_id, $help_text, getMainKeyboard());
-                break;
-                
-            default:
-                // Handle challenge responses
-                if (preg_match('/^day_(\d+)_active$/', $user['step'], $matches)) {
-                    $day = intval($matches[1]);
-                    handleChallengeResponse($user_id, $user, $day, $text);
-                } 
-                // Handle gratitude responses
-                elseif ($user['step'] == 'gratitude_active') {
-                    $gratitude_text = trim($text);
+        $lang = getUserLanguage($user);
+        
+        // Match buttons by comparing with translations
+        if ($text == t('btn_progress', $lang)) {
+            $report = generateProgressReportMultilang($user, $lang);
+            sendMessage($chat_id, $report, getMainKeyboard($lang));
+        }
+        elseif ($text == t('btn_all_days', $lang)) {
+            list($message, $keyboard) = generateAllDaysViewMultilang($user, $lang);
+            sendMessage($chat_id, $message, $keyboard);
+        }
+        elseif ($text == t('btn_today_challenge', $lang)) {
+            $current_day = $user['current_day'] ?? 1;
+            $completed_days = $user['completed_days'] ?? [];
+            
+            if ($current_day > 30) {
+                sendMessage($chat_id, t('all_days_completed', $lang), getMainKeyboard($lang));
+            } elseif (isset($completed_days[$current_day]) && $completed_days[$current_day]['completed']) {
+                sendMessage($chat_id, t('day_already_completed', $lang, ['day' => $current_day]), getMainKeyboard($lang));
+            } else {
+                $challenge_data = getChallengeText($current_day, $lang);
+                $challenge = $challenge_data['challenge'];
+                if ($challenge) {
+                    formatChallengeMessageMultilang($current_day, $challenge, $user['name'], $chat_id, $lang);
                     
-                    if (strlen($gratitude_text) >= 3) {
-                        $response_language = detectLanguage($gratitude_text);
-                        
-                        // Generate AI response for gratitude
-                        $ai_gratitude = generateCoachingResponse("Daily Gratitude Practice", $gratitude_text, $response_language);
-                        
-                        if ($response_language == 'fa') {
-                            $thank_message = "*{$ai_gratitude}*\n\n";
-                            $thank_message .= "💚 شکرگزاری یک تمرین قدرتمند است - ممنون که این لحظه رو با من به اشتراک گذاشتی!";
-                        } else {
-                            $thank_message = "*{$ai_gratitude}*\n\n";
-                            $thank_message .= "💚 Gratitude is a powerful practice - thank you for sharing this moment with me!";
-                        }
-                        
-                        sendMessage($chat_id, $thank_message, getMainKeyboard());
-                        
-                        saveUser($user_id, array_merge($user, [
-                            'step' => 'waiting_for_next_day',
-                            'last_activity' => date('Y-m-d H:i:s')
-                        ]));
-                    } else {
-                        $response_language = detectLanguage($gratitude_text);
-                        if ($response_language == 'fa') {
-                            sendMessage($chat_id, "لطفاً یک پاسخ با حداقل ۳ کاراکتر بنویسید. 😊");
-                        } else {
-                            sendMessage($chat_id, "Please provide a response with at least 3 characters. 😊");
-                        }
-                    }
+                    saveUser($user_id, array_merge($user, [
+                        'step' => "day_{$current_day}_active",
+                        'last_activity' => date('Y-m-d H:i:s')
+                    ]));
                 }
-                elseif (preg_match('/^edit_day_(\d+)$/', $user['step'], $matches)) {
-                    $day = intval($matches[1]);
-                    $new_response = trim($text);
+            }
+        }
+        elseif ($text == t('btn_gratitude', $lang)) {
+            $gratitude_prompt = t('gratitude_prompt', $lang);
+            
+            $other_lang = ($lang === 'en') ? 'fa' : 'en';
+            $keyboard = [
+                'inline_keyboard' => [
+                    [['text' => t('btn_translate_' . $other_lang, $lang), 'callback_data' => 'gratitude_' . $other_lang]]
+                ]
+            ];
+            
+            sendMessage($chat_id, $gratitude_prompt, $keyboard);
+            
+            saveUser($user_id, array_merge($user, [
+                'step' => 'gratitude_active',
+                'last_activity' => date('Y-m-d H:i:s')
+            ]));
+        }
+        elseif ($text == t('btn_help', $lang)) {
+            $help_text = t('help_text', $lang);
+            sendMessage($chat_id, $help_text, getMainKeyboard($lang));
+        }
+        elseif ($text == t('btn_change_language', $lang)) {
+            // Show language selection
+            $language_prompt = t('choose_language', 'en'); // Show bilingual
+            sendMessage($chat_id, $language_prompt, getLanguageSelectionKeyboard());
+        }
+        else {
+            // Handle challenge responses
+            if (preg_match('/^day_(\d+)_active$/', $user['step'], $matches)) {
+                $day = intval($matches[1]);
+                handleChallengeResponse($user_id, $user, $day, $text);
+            } 
+            // Handle gratitude responses
+            elseif ($user['step'] == 'gratitude_active') {
+                $gratitude_text = trim($text);
+                
+                if (strlen($gratitude_text) >= 3) {
+                    $response_language = detectLanguage($gratitude_text);
                     
-                    if (strlen($new_response) >= 3) {
-                        $response_language = detectLanguage($new_response);
-                        $completed_days = $user['completed_days'] ?? [];
-                        $completed_days[$day]['response'] = $new_response;
-                        $completed_days[$day]['edited_at'] = date('Y-m-d H:i:s');
-                        $completed_days[$day]['language'] = $response_language;
-                        
-                        if ($response_language == 'fa') {
-                            $edit_success = "*✅ پاسخ با موفقیت به‌روزرسانی شد!*\n\n";
-                            $edit_success .= "*روز {$day} - پاسخ جدید:*\n";
-                            $edit_success .= "_{$new_response}_\n\n";
-                            $edit_success .= "پاسخ شما ذخیره شد! به کار فوق‌العاده‌تان ادامه دهید! 🌟";
-                        } else {
-                            $edit_success = "*✅ Response Updated Successfully!*\n\n";
-                            $edit_success .= "*Day {$day} - New Response:*\n";
-                            $edit_success .= "_{$new_response}_\n\n";
-                            $edit_success .= "Your response has been saved! Keep up the amazing work! 🌟";
-                        }
-                        
-                        sendMessage($chat_id, $edit_success, getMainKeyboard());
-                        
-                        // Return user to normal state
-                        saveUser($user_id, array_merge($user, [
-                            'step' => 'waiting_for_next_day',
-                            'completed_days' => $completed_days,
-                            'last_activity' => date('Y-m-d H:i:s')
-                        ]));
-                    } else {
-                        sendMessage($chat_id, "Please provide a response with at least 3 characters. 😊");
-                    }
+                    // Generate AI response for gratitude
+                    $ai_gratitude = generateCoachingResponse("Daily Gratitude Practice", $gratitude_text, $response_language);
+                    
+                    $thank_message = t('gratitude_response', $response_language, ['response' => $ai_gratitude]);
+                    
+                    sendMessage($chat_id, $thank_message, getMainKeyboard($lang));
+                    
+                    saveUser($user_id, array_merge($user, [
+                        'step' => 'waiting_for_next_day',
+                        'last_activity' => date('Y-m-d H:i:s')
+                    ]));
                 } else {
-                    sendMessage($chat_id, "Hi {$user['name']}! 😊 Use the menu below to navigate:", getMainKeyboard());
+                    $short_msg = t('gratitude_short', $lang);
+                    sendMessage($chat_id, $short_msg);
                 }
-                break;
+            }
+            // Handle edit responses
+            elseif (preg_match('/^edit_day_(\d+)$/', $user['step'], $matches)) {
+                $day = intval($matches[1]);
+                $new_response = trim($text);
+                
+                if (strlen($new_response) >= 3) {
+                    $response_language = detectLanguage($new_response);
+                    $completed_days = $user['completed_days'] ?? [];
+                    $completed_days[$day]['response'] = $new_response;
+                    $completed_days[$day]['edited_at'] = date('Y-m-d H:i:s');
+                    $completed_days[$day]['language'] = $response_language;
+                    
+                    $edit_success = t('edit_success', $response_language, [
+                        'day' => $day,
+                        'response' => $new_response
+                    ]);
+                    
+                    sendMessage($chat_id, $edit_success, getMainKeyboard($lang));
+                    
+                    // Return user to normal state
+                    saveUser($user_id, array_merge($user, [
+                        'step' => 'waiting_for_next_day',
+                        'completed_days' => $completed_days,
+                        'last_activity' => date('Y-m-d H:i:s')
+                    ]));
+                } else {
+                    $short_msg = t('edit_short', $lang);
+                    sendMessage($chat_id, $short_msg);
+                }
+            } else {
+                $use_menu_msg = t('use_menu', $lang, ['name' => $user['name']]);
+                sendMessage($chat_id, $use_menu_msg, getMainKeyboard($lang));
+            }
         }
     }
     // Handle name input
     elseif ($user && $user['step'] == 'waiting_for_name') {
         $name = trim($text);
+        $lang = isset($user['language']) ? $user['language'] : 'en';
         
         if (strlen($name) > 2 && strlen($name) < 50) {
-            $intro_text = "*Great to meet you, {$name}! 🎉*\n\n";
-            $intro_text .= "*🧠 Why This Challenge Works:*\n\n";
-            $intro_text .= "Research in neuroplasticity shows that our brains can form new neural pathways through consistent practice. This challenge uses:\n\n";
-            $intro_text .= "• *Behavioral activation* - Small daily actions create positive momentum\n";
-            $intro_text .= "• *Cognitive restructuring* - Shifting negative self-talk to positive affirmations\n";
-            $intro_text .= "• *Exposure therapy principles* - Gradually stepping outside your comfort zone\n";
-            $intro_text .= "• *Self-efficacy theory* - Building confidence through mastery experiences\n\n";
-            $intro_text .= "🔒 *Your Privacy Matters:*\nI want you to feel completely safe sharing with me. All your responses and progress are encrypted and stored securely. Nobody has access to your personal information - not even the bot creator. This is your private space to grow and reflect. 🤗\n\n";
-            $intro_text .= "Are you ready to start your transformation journey right now? 🚀";
+            $intro_text = t('intro_text', $lang, ['name' => $name]);
             
             $keyboard = [
                 'inline_keyboard' => [
                     [
-                        ['text' => '✨ Yes, let\'s start now!', 'callback_data' => 'start_now'],
-                        ['text' => '⏰ I\'ll start later', 'callback_data' => 'start_later']
+                        ['text' => t('btn_start_now', $lang), 'callback_data' => 'start_now'],
+                        ['text' => t('btn_start_later', $lang), 'callback_data' => 'start_later']
                     ]
                 ]
             ];
             
             sendMessage($chat_id, $intro_text, $keyboard);
             
-            saveUser($user_id, [
-                'chat_id' => $chat_id,
-                'first_name' => $first_name,
+            saveUser($user_id, array_merge($user, [
                 'name' => $name,
-                'step' => 'waiting_for_start',
-                'created_at' => $user['created_at'] ?? date('Y-m-d H:i:s')
-            ]);
+                'step' => 'waiting_for_start'
+            ]));
         } else {
-            sendMessage($chat_id, "Please enter a valid name (2-50 characters):");
+            $invalid_msg = t('invalid_name', $lang);
+            sendMessage($chat_id, $invalid_msg);
         }
     }
     // Handle users who postponed and want to restart
     elseif ($user && $user['step'] == 'postponed' && $text == '/start') {
-        $restart_text = "*Welcome back, {$user['name']}! 🌟*\n\n";
-        $restart_text .= "I'm so glad you're ready to begin your confidence journey! Are you ready to start with Day 1?";
+        $lang = getUserLanguage($user);
+        $restart_text = t('welcome_back', $lang, ['name' => $user['name']]);
+        $restart_text .= "\n\n" . ($lang === 'fa' ? 'آماده شروع روز 1 هستید؟' : 'Are you ready to start with Day 1?');
         
         $keyboard = [
             'inline_keyboard' => [
                 [
-                    ['text' => '✨ Yes, let\'s start now!', 'callback_data' => 'start_now'],
-                    ['text' => '⏰ Maybe later', 'callback_data' => 'start_later']
+                    ['text' => t('btn_start_now', $lang), 'callback_data' => 'start_now'],
+                    ['text' => t('btn_start_later', $lang), 'callback_data' => 'start_later']
                 ]
             ]
         ];
@@ -836,12 +674,21 @@ if (isset($update['message'])) {
             'step' => 'waiting_for_start'
         ]));
     }
+    // Handle users without language set (shouldn't happen but safety check)
+    elseif ($user && $user['step'] == 'waiting_for_language') {
+        // They should use buttons, but just in case
+        $language_prompt = t('choose_language', 'en');
+        sendMessage($chat_id, $language_prompt, getLanguageSelectionKeyboard());
+    }
     // Default response for new users
     else {
-        if ($user) {
-            sendMessage($chat_id, "Hi {$user['name']}! 😊 Use the menu below to navigate:", getMainKeyboard());
+        if ($user && isset($user['language'])) {
+            $lang = $user['language'];
+            $use_menu_msg = t('use_menu', $lang, ['name' => $user['name'] ?? $first_name]);
+            sendMessage($chat_id, $use_menu_msg, getMainKeyboard($lang));
         } else {
-            sendMessage($chat_id, "Please start by typing /start 🌟");
+            $start_msg = t('use_start', 'en');
+            sendMessage($chat_id, $start_msg);
         }
     }
 }
