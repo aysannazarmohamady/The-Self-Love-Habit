@@ -1,7 +1,7 @@
 <?php
 // config.php
-define('BOT_TOKEN', '8032308468:AAENEHClufdgLTlZpV828UdHE6Q0DUrqBlI');
-define('GEMINI_API_KEY', 'AIzaSyBwFhDXRQsJqu8Go_tIzPfrmxyX2c5051o');
+define('BOT_TOKEN', '');
+define('GEMINI_API_KEY', '');
 define('DATA_FILE', 'users.json');
 
 // Include all required files
