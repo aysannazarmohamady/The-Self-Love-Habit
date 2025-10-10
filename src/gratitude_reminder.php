@@ -1,5 +1,5 @@
 <?php
-// gratitude_reminder.php - Multilingual gratitude practice reminder system
+// gratitude_reminder.php - Gratitude practice reminder system
 define('BOT_TOKEN', '');
 define('DATA_FILE', '');
 
@@ -7,53 +7,25 @@ define('DATA_FILE', '');
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Get user's language
-function getUserLanguage($user) {
-    if (isset($user['language']) && in_array($user['language'], ['en', 'fa'])) {
-        return $user['language'];
-    }
-    return 'en'; // Default
-}
-
 // Gratitude reminder messages
-function getRandomGratitudeMessage($lang = 'en') {
-    if ($lang === 'fa') {
-        $gratitude_messages = [
-            "*🙏 لحظه‌ای برای شکرگزاری*\n\nچه چیز خوبی الان در زندگیت هست?\n\nدکمه *🙏 شکرگزاری روزانه* در منو رو بزن تا یک چیز که امروز ازش ممنونی رو به اشتراک بذاری! 💚",
-            
-            "*✨ لحظه شکرگزاری*\n\nحتی در روزهای سخت، همیشه چیزی هست که قدردانش کنی.\n\nاز دکمه *🙏 شکرگزاری روزانه* برای تمرین این عادت قدرتمند استفاده کن! 🌟",
-            
-            "*👍 چک سریع شکرگزاری*\n\n30 ثانیه وقت بذار و به یک چیز که امروز باعث لبخندت شد فکر کن.\n\nاز طریق *🙏 شکرگزاری روزانه* در منو با من به اشتراک بذار! ☺️",
-            
-            "*🌟 یادآوری شکرگزاری*\n\nعلم نشون می‌ده شکرگزاری مغزت رو برای شادی بازسیم‌کشی می‌کنه!\n\nالان امتحان کن - *🙏 شکرگزاری روزانه* زیر رو بزن! 💫",
-            
-            "*🦋 لحظه‌ای برای قدردانی*\n\nیک شادی کوچک امروز چی بود?\n\nاز طریق دکمه *🙏 شکرگزاری روزانه* در منوت به اشتراک بذار! 💚",
-            
-            "*💚 تمرین شکرگزاری*\n\nتمرکز روی چیزهای خوب، چیزهای بیشتر خوب رو به زندگیت جذب می‌کنه.\n\n*🙏 شکرگزاری روزانه* رو بزن تا چیزی که ازش ممنونی رو به اشتراک بذاری! ✨",
-            
-            "*🌸 وقت سپاسگزاری*\n\nسلامتیت؟ یه نفر؟ یه لحظه؟ چی گرما به قلبت می‌ده?\n\nاز *🙏 شکرگزاری روزانه* در منو برای ابراز استفاده کن! 🙏",
-            
-            "*⭐ استراحت شکرگزاری*\n\nحتی لیست کردن یک چیز که ازش ممنونی می‌تونه کل حالت رو عوض کنه!\n\nامتحان کن - *🙏 شکرگزاری روزانه* زیر رو بزن! 💗"
-        ];
-    } else {
-        $gratitude_messages = [
-            "*🙏 Pause for gratitude*\n\nWhat's something good in your life right now?\n\nTap *🙏 Daily Gratitude* in the menu to share one thing you're grateful for today! 💚",
-            
-            "*✨ Gratitude moment*\n\nEven on tough days, there's always something to appreciate.\n\nUse *🙏 Daily Gratitude* button to practice this powerful habit! 🌟",
-            
-            "*👍 Quick gratitude check*\n\nTake 30 seconds to think of one thing that made you smile today.\n\nShare it with me using *🙏 Daily Gratitude* in the menu! ☺️",
-            
-            "*🌟 Gratitude reminder*\n\nScience shows gratitude rewires your brain for happiness!\n\nTry it now - tap *🙏 Daily Gratitude* below! 💫",
-            
-            "*🦋 A moment to appreciate*\n\nWhat's one small joy from today?\n\nShare it using the *🙏 Daily Gratitude* button in your menu! 💚",
-            
-            "*💚 Gratitude practice*\n\nFocusing on what's good attracts more good into your life.\n\nTap *🙏 Daily Gratitude* to share what you're thankful for! ✨",
-            
-            "*🌸 Time for thankfulness*\n\nYour health? A person? A moment? What brings warmth to your heart?\n\nUse *🙏 Daily Gratitude* in the menu to express it! 🙏",
-            
-            "*⭐ Gratitude break*\n\nEven listing one thing you're grateful for can shift your whole mood!\n\nTry it - tap *🙏 Daily Gratitude* below! 💗"
-        ];
-    }
+function getRandomGratitudeMessage() {
+    $gratitude_messages = [
+        "*🙏 Pause for gratitude*\n\nWhat's something good in your life right now?\n\nTap *🙏 Daily Gratitude* in the menu to share one thing you're grateful for today! 💚",
+        
+        "*✨ Gratitude moment*\n\nEven on tough days, there's always something to appreciate.\n\nUse *🙏 Daily Gratitude* button to practice this powerful habit! 🌟",
+        
+        "*💝 Quick gratitude check*\n\nTake 30 seconds to think of one thing that made you smile today.\n\nShare it with me using *🙏 Daily Gratitude* in the menu! ☺️",
+        
+        "*🌟 Gratitude reminder*\n\nScience shows gratitude rewires your brain for happiness!\n\nTry it now - tap *🙏 Daily Gratitude* below! 💫",
+        
+        "*🦋 A moment to appreciate*\n\nWhat's one small joy from today?\n\nShare it using the *🙏 Daily Gratitude* button in your menu! 💚",
+        
+        "*💚 Gratitude practice*\n\nFocusing on what's good attracts more good into your life.\n\nTap *🙏 Daily Gratitude* to share what you're thankful for! ✨",
+        
+        "*🌸 Time for thankfulness*\n\nYour health? A person? A moment? What brings warmth to your heart?\n\nUse *🙏 Daily Gratitude* in the menu to express it! 🙏",
+        
+        "*⭐ Gratitude break*\n\nEven listing one thing you're grateful for can shift your whole mood!\n\nTry it - tap *🙏 Daily Gratitude* below! 💝"
+    ];
     
     return $gratitude_messages[array_rand($gratitude_messages)];
 }
@@ -138,7 +110,6 @@ function sendGratitudeReminders() {
     foreach ($users as $user_id => $user) {
         echo "\n--- User ID: $user_id ---\n";
         echo "Name: " . ($user['name'] ?? 'N/A') . "\n";
-        echo "Language: " . ($user['language'] ?? 'not set') . "\n";
         echo "Step: " . ($user['step'] ?? 'N/A') . "\n";
         echo "Start Date: " . ($user['start_date'] ?? 'N/A') . "\n";
         echo "Chat ID: " . ($user['chat_id'] ?? 'N/A') . "\n";
@@ -157,7 +128,7 @@ function sendGratitudeReminders() {
         }
         
         // Skip users who haven't properly started
-        $skip_steps = ['postponed', 'waiting_for_name', 'waiting_for_start', 'waiting_for_language'];
+        $skip_steps = ['postponed', 'waiting_for_name', 'waiting_for_start'];
         if (isset($user['step']) && in_array($user['step'], $skip_steps)) {
             echo "SKIP: User step is " . $user['step'] . "\n";
             $skipped_count++;
@@ -166,12 +137,8 @@ function sendGratitudeReminders() {
         
         echo "SENDING: All conditions met\n";
         
-        // Get user's language
-        $user_lang = getUserLanguage($user);
-        echo "Using language: $user_lang\n";
-        
-        // Get a random gratitude message in user's language
-        $random_message = getRandomGratitudeMessage($user_lang);
+        // Get a random gratitude message
+        $random_message = getRandomGratitudeMessage();
         
         if (sendMessage($user['chat_id'], $random_message)) {
             $sent_count++;
