@@ -91,8 +91,167 @@ function getPersianGratitudePrompt() {
     return $message;
 }
 
-// Generate AI coaching response using Gemini API
+// Get final reflection prompt in appropriate language
+function getFinalReflectionPrompt($language = 'en') {
+    if ($language == 'fa') {
+        $message = "*🌟 لحظه‌ای برای تأمل نهایی 🌟*\n\n";
+        $message .= "تبریک! شما این سفر 30 روزه شگفت‌انگیز را تکمیل کردید! 🎉\n\n";
+        $message .= "قبل از اینکه به پایان برسیم، می‌خواهم از شما بپرسم:\n\n";
+        $message .= "💭 *این سفر چطور برایتان بود؟ چه تجربه‌ای داشتید؟*\n\n";
+        $message .= "لطفاً به صورت صادقانه در چند خط تجربه و احساستان را از این 30 روز با من در میان بگذارید. این بازخورد شما برای من بسیار ارزشمند است.\n\n";
+        $message .= "_منتظر شنیدن تجربه واقعی شما هستم..._";
+    } else {
+        $message = "*🌟 A Moment for Final Reflection 🌟*\n\n";
+        $message .= "Congratulations! You've completed this amazing 30-day journey! 🎉\n\n";
+        $message .= "Before we conclude, I want to ask you:\n\n";
+        $message .= "💭 *How was this journey for you? What was your experience?*\n\n";
+        $message .= "Please share honestly in a few lines your experience and feelings from these 30 days. Your feedback is incredibly valuable to me.\n\n";
+        $message .= "_I'm waiting to hear about your real experience..._";
+    }
+    
+    return $message;
+}
 
+// Generate comprehensive final feedback using all responses
+function generateFinalFeedback($user, $final_reflection, $language = 'en') {
+    $completed_days = $user['completed_days'] ?? [];
+    
+    // Collect all responses
+    $all_responses = "";
+    for ($day = 1; $day <= 30; $day++) {
+        if (isset($completed_days[$day]) && $completed_days[$day]['completed']) {
+            $all_responses .= "Day {$day}: " . $completed_days[$day]['response'] . "\n\n";
+        }
+    }
+    
+    if ($language == 'fa') {
+        $prompt = "شما یک مربی اعتماد به نفس حرفه‌ای و همدل هستید که 30 روز با این شخص همراه بوده‌اید.
+
+این تمام پاسخ‌های او به چالش‌های 30 روزه است:
+{$all_responses}
+
+و این بازخورد نهایی او درباره کل سفر است:
+\"{$final_reflection}\"
+
+CRITICAL: بر اساس تمام پاسخ‌ها و این بازخورد نهایی، یک پیام شخصی‌سازی شده و عمیق به او بنویسید.
+
+پیام شما باید شامل این موارد باشد:
+
+بخش 1 - قدردانی از سفر مشترک (2-3 جمله):
+- از همراهی او در این 30 روز تشکر کنید
+- به رشد و تلاش‌های او اشاره کنید
+- احساس واقعی خود را از دیدن پیشرفتش بیان کنید
+
+بخش 2 - تحلیل عمیق شخصیت بر اساس تمام پاسخ‌ها (4-5 جمله):
+- الگوها و نقاط قوت مشخصی که در پاسخ‌هایش دیدید
+- تغییرات و رشدی که از روز 1 تا 30 مشاهده کردید
+- ویژگی‌های منحصر به فرد شخصیتی که برجسته شدند
+- چالش‌هایی که با شجاعت پشت سر گذاشت
+- این تحلیل باید بسیار شخصی و مبتنی بر پاسخ‌های واقعی او باشد
+
+بخش 3 - راهنمایی برای آینده (3-4 جمله):
+- توصیه‌های عملی بر اساس نقاط قوت و چالش‌هایی که شناختید
+- یادآوری اینکه این سفر تازه شروع شده و ادامه دارد
+- انگیزه و امیدواری برای ادامه مسیر
+- پیشنهاد گام‌های بعدی متناسب با شخصیت او
+
+نکات مهم:
+- از کلمات و مفاهیمی که خود کاربر در پاسخ‌هایش استفاده کرده، اشاره کنید
+- بسیار شخصی، صمیمی و واقعی بنویسید
+- نشان دهید که واقعاً تمام سفرش را دیده‌اید
+- لحن گرم، حمایتگر و الهام‌بخش داشته باشید
+- از کلیشه‌های تکراری پرهیز کنید
+
+فرمت: یک پیام یکپارچه و روان در 9-12 جمله، بدون عنوان یا شماره‌گذاری بخش‌ها، فقط متن پیوسته و قلبی.";
+    } else {
+        $prompt = "You are a professional, empathetic confidence coach who has accompanied this person for 30 days.
+
+These are all their responses to the 30-day challenges:
+{$all_responses}
+
+And this is their final reflection on the whole journey:
+\"{$final_reflection}\"
+
+CRITICAL: Based on all responses and this final reflection, write a personalized and deep message to them.
+
+Your message should include:
+
+Part 1 - Gratitude for the Shared Journey (2-3 sentences):
+- Thank them for their companionship during these 30 days
+- Reference their growth and efforts
+- Express your genuine feelings about witnessing their progress
+
+Part 2 - Deep Personality Analysis Based on All Responses (4-5 sentences):
+- Specific patterns and strengths you saw in their responses
+- Changes and growth you observed from day 1 to 30
+- Unique personality traits that emerged
+- Challenges they courageously overcame
+- This analysis must be very personal and based on their actual responses
+
+Part 3 - Guidance for the Future (3-4 sentences):
+- Practical recommendations based on the strengths and challenges you identified
+- Reminder that this journey has just begun and continues
+- Motivation and hope for continuing the path
+- Suggestions for next steps suited to their personality
+
+Important Notes:
+- Reference words and concepts the user themselves used in their responses
+- Write very personally, intimately, and authentically
+- Show that you truly saw their entire journey
+- Keep tone warm, supportive, and inspiring
+- Avoid repetitive clichés
+
+Format: One cohesive, flowing message in 9-12 sentences, without titles or section numbering, just continuous heartfelt text.";
+    }
+
+    $data = [
+        'contents' => [
+            [
+                'parts' => [
+                    ['text' => $prompt]
+                ]
+            ]
+        ],
+        'generationConfig' => [
+            'temperature' => 0.9,
+            'topK' => 40,
+            'topP' => 0.95,
+            'maxOutputTokens' => 800,
+        ]
+    ];
+
+    $options = [
+        'http' => [
+            'header' => [
+                "Content-Type: application/json",
+                "X-goog-api-key: " . GEMINI_API_KEY
+            ],
+            'method' => 'POST',
+            'content' => json_encode($data)
+        ]
+    ];
+
+    $context = stream_context_create($options);
+    $response = file_get_contents('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', false, $context);
+    
+    if ($response === false) {
+        return $language == 'fa' 
+            ? "تبریک می‌گویم! شما این سفر 30 روزه را با موفقیت به پایان رساندید. این تازه شروع سفر واقعی شماست. با اعتماد به نفسی که ساخته‌اید، به پیش بروید! 🌟"
+            : "Congratulations! You have successfully completed this 30-day journey. This is just the beginning of your real journey. Move forward with the confidence you've built! 🌟";
+    }
+    
+    $result = json_decode($response, true);
+    
+    if (isset($result['candidates'][0]['content']['parts'][0]['text'])) {
+        return trim($result['candidates'][0]['content']['parts'][0]['text']);
+    }
+    
+    return $language == 'fa' 
+        ? "تبریک می‌گویم! شما این سفر 30 روزه را با موفقیت به پایان رساندید. این تازه شروع سفر واقعی شماست. با اعتماد به نفسی که ساخته‌اید، به پیش بروید! 🌟"
+        : "Congratulations! You have successfully completed this 30-day journey. This is just the beginning of your real journey. Move forward with the confidence you've built! 🌟";
+}
+
+// Generate AI coaching response using Gemini API
 function generateCoachingResponse($challenge_title, $user_response, $language = 'en', $custom_prompt = null) {
     if ($custom_prompt) {
         $prompt = $custom_prompt;
@@ -415,18 +574,25 @@ function handleChallengeResponse($user_id, $user, $day, $text) {
         
         // Update user data
         $next_day = $day + 1;
-        saveUser($user_id, array_merge($user, [
-            'step' => $next_day <= 30 ? 'waiting_for_next_day' : 'challenge_completed',
-            'completed_days' => $completed_days,
-            'current_day' => min($next_day, 30),
-            'last_activity' => date('Y-m-d H:i:s')
-        ]));
         
-        // If challenge is complete
+        // If it's day 30, ask for final reflection
         if ($day == 30) {
-            $final_message = "\n\n🎊 *INCREDIBLE! You've completed the entire 30-Day Challenge!* 🎊\n\n";
-            $final_message .= "You can still view and edit your responses anytime using '📅 All Days'!";
-            sendMessage($user['chat_id'], $final_message);
+            $final_prompt = getFinalReflectionPrompt($response_language);
+            sendMessage($user['chat_id'], $final_prompt);
+            
+            saveUser($user_id, array_merge($user, [
+                'step' => 'waiting_final_reflection',
+                'completed_days' => $completed_days,
+                'current_day' => 30,
+                'last_activity' => date('Y-m-d H:i:s'),
+                'day_30_language' => $response_language
+            ]));
+        } else {
+            saveUser($user_id, array_merge($user, [
+                'step' => $next_day <= 30 ? 'waiting_for_next_day' : 'challenge_completed','completed_days' => $completed_days,
+                'current_day' => min($next_day, 30),
+                'last_activity' => date('Y-m-d H:i:s')
+            ]));
         }
         
         return true;
@@ -452,9 +618,9 @@ function getDaysSinceStart($start_date) {
 // Format challenge message with translation button
 function formatChallengeMessage($day, $challenge, $user_name, $chat_id) {
     $message = "*🎉 Dear {$user_name}! Ready for today's adventure?*\n\n";
-    $message .= "━━━━━━━━━━━━━━━━━━━━━\n";
+    $message .= "━━━━━━━━━━━━━━━━━━━━\n";
     $message .= "*📅 DAY {$day}: {$challenge['title']}*\n";
-    $message .= "━━━━━━━━━━━━━━━━━━━━━\n\n";
+    $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
     $message .= $challenge['description'] . "\n\n";
     $message .= "💡 *Why this works:* " . $challenge['why_it_works'] . "\n\n";
     $message .= $challenge['prompt'];
@@ -526,7 +692,7 @@ if (isset($update['callback_query'])) {
         
         $persian_content = getPersianChallenge($day);
         
-        $message = "*📝 توضیح به فارسی - روز {$day}*\n\n";
+        $message = "*🔍 توضیح به فارسی - روز {$day}*\n\n";
         $message .= $persian_content . "\n\n";
         $message .= "_برای پاسخ دادن، متن خود را تایپ کنید. می‌توانید به فارسی یا انگلیسی پاسخ دهید._";
         
@@ -599,7 +765,7 @@ if (isset($update['callback_query'])) {
             $current_response = $completed_days[$day]['response'];
             $completed_at = $completed_days[$day]['completed_at'];
             
-            $view_message = "*📝 Day {$day}: {$challenge_title}*\n\n";
+            $view_message = "*🔍 Day {$day}: {$challenge_title}*\n\n";
             $view_message .= "*Status:* ✅ Completed\n";
             $view_message .= "*Completed on:* " . date('M j, Y', strtotime($completed_at)) . "\n\n";
             $view_message .= "*Your Response:*\n";
@@ -790,7 +956,49 @@ if (isset($update['message'])) {
                 if (preg_match('/^day_(\d+)_active$/', $user['step'], $matches)) {
                     $day = intval($matches[1]);
                     handleChallengeResponse($user_id, $user, $day, $text);
-                } 
+                }
+                // Handle final reflection after day 30
+                elseif ($user['step'] == 'waiting_final_reflection') {
+                    $final_reflection = trim($text);
+                    
+                    if (strlen($final_reflection) >= 10) {
+                        $reflection_language = $user['day_30_language'] ?? 'en';
+                        
+                        // Generate comprehensive final feedback
+                        $final_feedback = generateFinalFeedback($user, $final_reflection, $reflection_language);
+                        
+                        if ($reflection_language == 'fa') {
+                            $thank_message = "*🌟 پایان یک سفر، شروع مسیری جدید 🌟*\n\n";
+                            $thank_message .= $final_feedback . "\n\n";
+                            $thank_message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+                            $thank_message .= "این سفر تازه شروع شده است. با اعتماد به نفسی که ساخته‌اید، به جلو حرکت کنید! 🚀\n\n";
+                            $thank_message .= "شما همیشه می‌توانید به پاسخ‌های گذشته خود از طریق '📅 All Days' مراجعه کنید و آن‌ها را مرور کنید.";
+                        } else {
+                            $thank_message = "*🌟 The End of One Journey, The Beginning of Another 🌟*\n\n";
+                            $thank_message .= $final_feedback . "\n\n";
+                            $thank_message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+                            $thank_message .= "This journey has just begun. Move forward with the confidence you've built! 🚀\n\n";
+                            $thank_message .= "You can always revisit and review your past responses through '📅 All Days'.";
+                        }
+                        
+                        sendMessage($chat_id, $thank_message, getMainKeyboard());
+                        
+                        // Save final reflection and mark journey as complete
+                        saveUser($user_id, array_merge($user, [
+                            'step' => 'journey_complete',
+                            'final_reflection' => $final_reflection,
+                            'final_reflection_date' => date('Y-m-d H:i:s'),
+                            'last_activity' => date('Y-m-d H:i:s')
+                        ]));
+                    } else {
+                        $reflection_language = $user['day_30_language'] ?? 'en';
+                        if ($reflection_language == 'fa') {
+                            sendMessage($chat_id, "لطفاً تجربه خود را با حداقل 10 کاراکتر به اشتراک بگذارید تا بتوانم بازخورد مناسبی به شما بدهم. 😊");
+                        } else {
+                            sendMessage($chat_id, "Please share your experience with at least 10 characters so I can give you proper feedback. 😊");
+                        }
+                    }
+                }
                 // Handle gratitude responses
                 elseif ($user['step'] == 'gratitude_active') {
                     $gratitude_text = trim($text);
