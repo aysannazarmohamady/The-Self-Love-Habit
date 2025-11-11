@@ -1,7 +1,7 @@
 <?php
 // cron.php - Simple reminder system with multiple message variations
-define('BOT_TOKEN', '8032308468:AAENEHClufdgLTlZpV828UdHE6Q0DUrqBlI');
-define('DATA_FILE', '/home/jetncpan/public_html/selflove/users.json');
+define('BOT_TOKEN', '');
+define('DATA_FILE', '');
 
 // Enable error reporting
 error_reporting(E_ALL);
