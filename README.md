@@ -4,7 +4,7 @@
 
 A Telegram bot designed to guide users through a scientifically-backed 30-day journey to boost self-confidence through daily challenges and AI-powered coaching responses.
 
-<img width="1511" height="1065" alt="image" src="https://github.com/user-attachments/assets/49d19854-dce9-48cd-9a93-d42cc4bce8e3" />
+<img width="1498" height="1080" alt="image" src="https://github.com/user-attachments/assets/93ba9b69-0608-488a-9ce8-ff07590a45d1" />
 
 ## Features
 
