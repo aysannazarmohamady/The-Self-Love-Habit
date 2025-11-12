@@ -4,9 +4,14 @@ define('BOT_TOKEN', '');
 define('GEMINI_API_KEY', '');
 define('DATA_FILE', 'users.json');
 
-// Include challenges data
+// Include challenges data - BOTH LEVELS
 require_once 'challenges.php';
 require_once 'challenges_fa.php';
+require_once 'challenges_level2.php';
+require_once 'challenges_level2_fa.php';
+
+// Include profile functions
+require_once 'profile_functions.php';
 
 // Load users data from JSON
 function loadUsers() {
@@ -62,14 +67,34 @@ function sendMessage($chat_id, $text, $reply_markup = null) {
 
 // Detect language of text (simple Persian detection)
 function detectLanguage($text) {
-    // Simple Persian detection based on Persian characters
     $persian_pattern = '/[\x{0600}-\x{06FF}\x{0750}-\x{077F}\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u';
     return preg_match($persian_pattern, $text) ? 'fa' : 'en';
 }
 
-// Get Persian challenge content
-function getPersianChallenge($day) {
-    $fa_challenge = getFaChallenge($day);
+// **NEW: Unified challenge getter - works for both Level 1 and Level 2**
+function getChallengeUnified($day) {
+    if ($day <= 30) {
+        // Level 1
+        return getChallenge($day);
+    } elseif ($day >= 31 && $day <= 60) {
+        // Level 2
+        return getLevel2Challenge($day);
+    }
+    return null;
+}
+
+// **NEW: Get Persian challenge for any level**
+function getPersianChallengeUnified($day) {
+    if ($day <= 30) {
+        // Level 1 Persian
+        $fa_challenge = getFaChallenge($day);
+    } elseif ($day >= 31 && $day <= 60) {
+        // Level 2 Persian
+        $fa_challenge = getLevel2FaChallenge($day);
+    } else {
+        return "متأسفانه این چالش به فارسی موجود نیست.";
+    }
+    
     if (!$fa_challenge) {
         return "متأسفانه این چالش به فارسی موجود نیست.";
     }
@@ -87,6 +112,66 @@ function getPersianGratitudePrompt() {
     $message .= "یک چیزی که الان ازش ممنونی چیه?\n\n";
     $message .= "می‌تونه بزرگ یا کوچیک باشه - سلامتیت، یه نفر، یه لحظه، هر چیزی که گرما به قلبت می‌ده.\n\n";
     $message .= "_با من به اشتراک بذار:_";
+    
+    return $message;
+}
+
+// **NEW: Level 1 completion celebration message**
+function getLevel1CompletionMessage($language = 'en') {
+    if ($language == 'fa') {
+        $message = "*🎊 تبریک! Level 1: Self-Confidence رو تموم کردی! 🎊*\n\n";
+        $message .= "*✨ دستاوردهای تو:*\n";
+        $message .= "• 30 روز متوالی ✅\n";
+        $message .= "• 300 امتیاز 🏆\n";
+        $message .= "• از خودشناسی تا اعتماد به نفس پایه\n\n";
+        $message .= "*🎯 آماده‌ای برای مرحله بعدی؟*\n\n";
+        $message .= "📍 *الان کجایی:* Level 1 ✅ تموم شد\n";
+        $message .= "📍 *بعدی کجاست:* Level 2 - Social Confidence\n";
+        $message .= "_(تمرکز: مهارت‌های اجتماعی و ارتباطات)_\n\n";
+        $message .= "از اعتماد به نفس فردی به اعتماد به نفس اجتماعی! 💪";
+    } else {
+        $message = "*🎊 Congratulations! You completed Level 1: Self-Confidence! 🎊*\n\n";
+        $message .= "*✨ Your Achievements:*\n";
+        $message .= "• 30 consecutive days ✅\n";
+        $message .= "• 300 points 🏆\n";
+        $message .= "• From self-awareness to foundational confidence\n\n";
+        $message .= "*🎯 Ready for the next stage?*\n\n";
+        $message .= "📍 *Where you are:* Level 1 ✅ Complete\n";
+        $message .= "📍 *What's next:* Level 2 - Social Confidence\n";
+        $message .= "_(Focus: Social skills and communication)_\n\n";
+        $message .= "From personal confidence to social confidence! 💪";
+    }
+    
+    return $message;
+}
+
+// **NEW: Level 2 introduction message**
+function getLevel2IntroMessage($language = 'en') {
+    if ($language == 'fa') {
+        $message = "*🌟 Level 2: Social Confidence 🌟*\n\n";
+        $message .= "از اعتماد به نفس فردی به اعتماد به نفس اجتماعی!\n\n";
+        $message .= "در 30 روز آینده یاد می‌گیری:\n";
+        $message .= "✓ با غریبه‌ها راحت حرف بزنی\n";
+        $message .= "✓ مرزهای سالم تعیین کنی\n";
+        $message .= "✓ در جمع صدات رو پیدا کنی\n";
+        $message .= "✓ تعارض رو با وقار مدیریت کنی\n";
+        $message .= "✓ رهبری و ارتباطات قاطعانه\n\n";
+        $message .= "💪 *آماده‌ای؟ Day 31 منتظرته!*\n\n";
+        $message .= "یادته روز اول چقدر هیجان‌زده بودی؟\n";
+        $message .= "الان اون هیجان + 30 روز تجربه داری! 🚀";
+    } else {
+        $message = "*🌟 Level 2: Social Confidence 🌟*\n\n";
+        $message .= "From personal confidence to social confidence!\n\n";
+        $message .= "In the next 30 days you'll learn to:\n";
+        $message .= "✓ Speak comfortably with strangers\n";
+        $message .= "✓ Set healthy boundaries\n";
+        $message .= "✓ Find your voice in groups\n";
+        $message .= "✓ Handle conflicts with grace\n";
+        $message .= "✓ Lead and communicate assertively\n\n";
+        $message .= "💪 *Ready? Day 31 awaits!*\n\n";
+        $message .= "Remember how excited you were on Day 1?\n";
+        $message .= "Now you have that excitement + 30 days of experience! 🚀";
+    }
     
     return $message;
 }
@@ -118,7 +203,9 @@ function generateFinalFeedback($user, $final_reflection, $language = 'en') {
     
     // Collect all responses
     $all_responses = "";
-    for ($day = 1; $day <= 30; $day++) {
+    $max_day = max(array_keys($completed_days));
+    
+    for ($day = 1; $day <= $max_day; $day++) {
         if (isset($completed_days[$day]) && $completed_days[$day]['completed']) {
             $all_responses .= "Day {$day}: " . $completed_days[$day]['response'] . "\n\n";
         }
@@ -420,7 +507,7 @@ function getMainKeyboard() {
         'keyboard' => [
             [['text' => '📊 My Progress'], ['text' => '📅 All Days']],
             [['text' => '🎯 Today\'s Challenge'], ['text' => '🙏 Daily Gratitude']],
-            [['text' => '❓ Help']]
+            [['text' => '👤 My Profile'], ['text' => '❓ Help']]
         ],
         'resize_keyboard' => true,
         'persistent' => true
@@ -452,10 +539,14 @@ function getUserProgress($user) {
         }
     }
     
+    // **NEW: Support for Level 2**
+    $current_day = $user['current_day'] ?? 1;
+    $total_days = $current_day <= 30 ? 30 : 60;
+    
     return [
         'completed' => $completed_count,
-        'total' => 30,
-        'percentage' => round(($completed_count / 30) * 100, 1)
+        'total' => $total_days,
+        'percentage' => round(($completed_count / $total_days) * 100, 1)
     ];
 }
 
@@ -463,19 +554,58 @@ function getUserProgress($user) {
 function generateProgressReport($user) {
     $progress = getUserProgress($user);
     $points = calculatePoints($user);
+    $current_day = $user['current_day'] ?? 1;
+    
+    // **NEW: Determine current level**
+    $current_level = $current_day <= 30 ? 1 : 2;
+    $level_name = $current_level == 1 ? "Self-Confidence" : "Social Confidence";
     
     $message = "*🌟 {$user['name']}'s Confidence Journey 🌟*\n\n";
-    $message .= "📊 *Progress:* {$progress['completed']}/30 days ({$progress['percentage']}%)\n";
+    
+    // **NEW: Show level progress**
+    if ($current_level == 1) {
+        $level1_completed = 0;
+        $completed_days = $user['completed_days'] ?? [];
+        for ($i = 1; $i <= 30; $i++) {
+            if (isset($completed_days[$i]) && $completed_days[$i]['completed']) {
+                $level1_completed++;
+            }
+        }
+        $message .= "📍 *Current Level:* Level 1 - {$level_name}\n";
+        $message .= "📊 *Level 1 Progress:* {$level1_completed}/30 days\n";
+    } else {
+        $level1_completed = 0;
+        $level2_completed = 0;
+        $completed_days = $user['completed_days'] ?? [];
+        
+        for ($i = 1; $i <= 30; $i++) {
+            if (isset($completed_days[$i]) && $completed_days[$i]['completed']) {
+                $level1_completed++;
+            }
+        }
+        for ($i = 31; $i <= 60; $i++) {
+            if (isset($completed_days[$i]) && $completed_days[$i]['completed']) {
+                $level2_completed++;
+            }
+        }
+        
+        $message .= "📍 *Current Level:* Level 2 - {$level_name}\n";
+        $message .= "📊 *Level 1:* {$level1_completed}/30 days ✅\n";
+        $message .= "📊 *Level 2:* {$level2_completed}/30 days ⏳\n";
+    }
+    
     $message .= "🏆 *Total Points:* {$points}\n";
     $message .= "📅 *Started:* " . ($user['start_date'] ?? 'Not started') . "\n\n";
     
     // Progress bar
     $completed = $progress['completed'];
+    $total = $progress['total'];
     $bar_length = 20;
-    $filled = round(($completed / 30) * $bar_length);
+    $filled = round(($completed / $total) * $bar_length);
     $empty = $bar_length - $filled;
     $progress_bar = str_repeat('🟩', $filled) . str_repeat('⬜', $empty);
-    $message .= "Progress: {$progress_bar}\n\n";
+    $message .= "Progress: {$progress_bar}\n";
+    $message .= "({$progress['percentage']}% complete)\n\n";
     
     if ($completed > 0) {
         $message .= "Keep up the amazing work! 🚀\n";
@@ -488,18 +618,21 @@ function generateProgressReport($user) {
     return $message;
 }
 
-// Generate all days view
+// **NEW: Generate all days view supporting Level 2**
 function generateAllDaysView($user) {
     $completed_days = $user['completed_days'] ?? [];
     $current_day = $user['current_day'] ?? 1;
     
-    $message = "*📅 Your 30-Day Challenge Overview*\n\n";
+    $message = "*📅 Your Challenge Overview*\n\n";
+    
+    // Determine max available day
+    $max_day = min($current_day, 60);
     
     // Create inline keyboard with all days
     $buttons = [];
     $row = [];
     
-    for ($day = 1; $day <= 30; $day++) {
+    for ($day = 1; $day <= $max_day; $day++) {
         $is_completed = isset($completed_days[$day]) && $completed_days[$day]['completed'];
         $is_available = $day <= $current_day;
         
@@ -509,6 +642,13 @@ function generateAllDaysView($user) {
             $status = '⭕';
         } else {
             $status = '🔒';
+        }
+        
+        // **NEW: Add level separator**
+        if ($day == 31 && $max_day >= 31) {
+            $buttons[] = $row;
+            $row = [];
+            $buttons[] = [['text' => '━━━ Level 2: Social Confidence ━━━', 'callback_data' => 'level2_header']];
         }
         
         $button_text = "Day {$day} {$status}";
@@ -551,8 +691,8 @@ function handleChallengeResponse($user_id, $user, $day, $text) {
             'language' => $response_language
         ];
         
-        // Get challenge title for AI response
-        $challenge = getChallenge($day);
+        // **NEW: Get challenge title using unified function**
+        $challenge = getChallengeUnified($day);
         $challenge_title = $challenge ? $challenge['title'] : "Day {$day} Challenge";
         
         // Generate AI coaching response in appropriate language
@@ -575,7 +715,7 @@ function handleChallengeResponse($user_id, $user, $day, $text) {
         // Update user data
         $next_day = $day + 1;
         
-        // If it's day 30, ask for final reflection
+        // **NEW: Handle Day 30 completion - offer Level 2**
         if ($day == 30) {
             $final_prompt = getFinalReflectionPrompt($response_language);
             sendMessage($user['chat_id'], $final_prompt);
@@ -587,10 +727,25 @@ function handleChallengeResponse($user_id, $user, $day, $text) {
                 'last_activity' => date('Y-m-d H:i:s'),
                 'day_30_language' => $response_language
             ]));
-        } else {
+        }
+        // **NEW: Handle Day 60 completion - Level 2 finished**
+        elseif ($day == 60) {
+            $final_prompt = getFinalReflectionPrompt($response_language);
+            sendMessage($user['chat_id'], $final_prompt);
+            
             saveUser($user_id, array_merge($user, [
-                'step' => $next_day <= 30 ? 'waiting_for_next_day' : 'challenge_completed','completed_days' => $completed_days,
-                'current_day' => min($next_day, 30),
+                'step' => 'waiting_final_reflection_level2',
+                'completed_days' => $completed_days,
+                'current_day' => 60,
+                'last_activity' => date('Y-m-d H:i:s'),
+                'day_60_language' => $response_language
+            ]));
+        }
+        else {
+            saveUser($user_id, array_merge($user, [
+                'step' => $next_day <= 60 ? 'waiting_for_next_day' : 'challenge_completed',
+                'completed_days' => $completed_days,
+                'current_day' => min($next_day, 60),
                 'last_activity' => date('Y-m-d H:i:s')
             ]));
         }
@@ -615,14 +770,20 @@ function getDaysSinceStart($start_date) {
     return $interval->days + 1;
 }
 
-// Format challenge message with translation button
+// **NEW: Format challenge message with translation button - works for both levels**
 function formatChallengeMessage($day, $challenge, $user_name, $chat_id) {
+    $level_indicator = $day <= 30 ? "Level 1" : "Level 2";
+    
     $message = "*🎉 Dear {$user_name}! Ready for today's adventure?*\n\n";
     $message .= "━━━━━━━━━━━━━━━━━━━━\n";
-    $message .= "*📅 DAY {$day}: {$challenge['title']}*\n";
+    $message .= "*📅 DAY {$day} ({$level_indicator}): {$challenge['title']}*\n";
     $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
     $message .= $challenge['description'] . "\n\n";
-    $message .= "💡 *Why this works:* " . $challenge['why_it_works'] . "\n\n";
+    
+    if (isset($challenge['why_it_works'])) {
+        $message .= "💡 *Why this works:* " . $challenge['why_it_works'] . "\n\n";
+    }
+    
     $message .= $challenge['prompt'];
     
     // Add inline keyboard with Persian translation option
@@ -656,7 +817,7 @@ if (isset($update['callback_query'])) {
         $start_text .= "Let's dive into your first challenge...\n\n";
         
         // Get Day 1 challenge from external file
-        $challenge = getChallenge(1);
+        $challenge = getChallengeUnified(1);
         formatChallengeMessage(1, $challenge, $user['name'], $chat_id);
         
         sendMessage($chat_id, $start_text);
@@ -686,11 +847,67 @@ if (isset($update['callback_query'])) {
         
         file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
     }
+    // **NEW: Handle "Start Level 2" button**
+    elseif ($data == 'start_level2') {
+        $reflection_language = $user['day_30_language'] ?? 'en';
+        
+        // Send Level 2 intro
+        $intro_message = getLevel2IntroMessage($reflection_language);
+        sendMessage($chat_id, $intro_message);
+        
+        // Small delay
+        sleep(2);
+        
+        // Send Day 31 challenge
+        $challenge = getChallengeUnified(31);
+        formatChallengeMessage(31, $challenge, $user['name'], $chat_id);
+        
+        // Update user to Level 2
+        saveUser($user_id, array_merge($user, [
+            'step' => 'day_31_active',
+            'current_day' => 31,
+            'level' => 2,
+            'level2_start_date' => date('Y-m-d'),
+            'last_activity' => date('Y-m-d H:i:s')
+        ]));
+        
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
+    // **NEW: Handle "Review my journey" button**
+    elseif ($data == 'review_journey') {
+        list($message, $keyboard) = generateAllDaysView($user);
+        sendMessage($chat_id, $message, $keyboard);
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
+    // **NEW: Handle "Take a break" button**
+    elseif ($data == 'take_break') {
+        $reflection_language = $user['day_30_language'] ?? 'en';
+        
+        if ($reflection_language == 'fa') {
+            $break_message = "*🌸 بدون مشکل! 🌸*\n\n";
+            $break_message .= "هر وقت آماده شدی برای Level 2، از منوی اصلی '🎯 Today\'s Challenge' رو بزن.\n\n";
+            $break_message .= "من اینجام و منتظرتم! 💚";
+        } else {
+            $break_message = "*🌸 No problem at all! 🌸*\n\n";
+            $break_message .= "Whenever you're ready for Level 2, just tap '🎯 Today\'s Challenge' from the main menu.\n\n";
+            $break_message .= "I'm here waiting for you! 💚";
+        }
+        
+        sendMessage($chat_id, $break_message, getMainKeyboard());
+        
+        saveUser($user_id, array_merge($user, [
+            'step' => 'level1_completed_break',
+            'last_activity' => date('Y-m-d H:i:s')
+        ]));
+        
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
     // Handle translate to Persian for challenges
     elseif (strpos($data, 'translate_fa_') === 0) {
         $day = intval(str_replace('translate_fa_', '', $data));
         
-        $persian_content = getPersianChallenge($day);
+        // **NEW: Use unified Persian function**
+        $persian_content = getPersianChallengeUnified($day);
         
         $message = "*🔍 توضیح به فارسی - روز {$day}*\n\n";
         $message .= $persian_content . "\n\n";
@@ -751,7 +968,9 @@ if (isset($update['callback_query'])) {
     elseif (strpos($data, 'view_day_') === 0) {
         $day = intval(str_replace('view_day_', '', $data));
         $completed_days = $user['completed_days'] ?? [];
-        $challenge = getChallenge($day);
+        
+        // **NEW: Use unified challenge function**
+        $challenge = getChallengeUnified($day);
         
         if (!$challenge) {
             file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id'] . "&text=Challenge not found!");
@@ -791,7 +1010,6 @@ if (isset($update['callback_query'])) {
                 ]
             ];
             
-            // Send message with only back button since formatChallengeMessage already sends the main message
             sendMessage($chat_id, "_Type your response below or use the Persian translation button above._", $keyboard);
             
             // Set user to active for this day
@@ -810,7 +1028,9 @@ if (isset($update['callback_query'])) {
         
         if (isset($completed_days[$day]) && $completed_days[$day]['completed']) {
             $current_response = $completed_days[$day]['response'];
-            $challenge = getChallenge($day);
+            
+            // **NEW: Use unified challenge function**
+            $challenge = getChallengeUnified($day);
             $challenge_title = $challenge ? $challenge['title'] : "Day {$day}";
             
             $edit_message = "*✏️ Edit Your Response - Day {$day}*\n";
@@ -846,6 +1066,48 @@ if (isset($update['callback_query'])) {
     elseif (strpos($data, 'locked_day_') === 0) {
         $day = intval(str_replace('locked_day_', '', $data));
         file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id'] . "&text=Day {$day} is not available yet! Complete previous days first.");
+    }
+    // **NEW: Handle level 2 header click (do nothing)**
+
+    // **NEW: Handle profile callbacks**
+    elseif ($data == 'start_profile') {
+        startProfileCompletion($user_id, $user, $chat_id);
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
+    elseif ($data == 'view_profile') {
+        handleProfileMenu($chat_id, $user);
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
+    elseif ($data == 'edit_profile') {
+        handleEditProfile($user_id, $user, $chat_id);
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
+    elseif (strpos($data, 'profile_answer_') === 0) {
+        // Profile question answer: profile_answer_{question_num}_{value}
+        $parts = explode('_', $data);
+        $question_num = intval($parts[2]);
+        $answer_value = implode('_', array_slice($parts, 3));
+        handleProfileAnswerCallback($user_id, $user, $question_num, $answer_value, $chat_id, $callback['id']);
+    }
+    elseif (strpos($data, 'edit_profile_field_') === 0) {
+        $field_num = intval(str_replace('edit_profile_field_', '', $data));
+        handleEditProfileField($user_id, $user, $field_num, $chat_id, $callback['id']);
+    }
+    elseif (strpos($data, 'profile_edit_answer_') === 0) {
+        // Edit answer: profile_edit_answer_{question_num}_{value}
+        $parts = explode('_', $data);
+        $question_num = intval($parts[3]);
+        $answer_value = implode('_', array_slice($parts, 4));
+        handleEditFieldAnswer($user_id, $user, $question_num, $answer_value, $chat_id, $callback['id']);
+    }
+    elseif ($data == 'back_to_menu') {
+        $message_text = "Hi {$user['name']}! 😊 Use the menu below:";
+        sendMessage($chat_id, $message_text, getMainKeyboard());
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
+    }
+
+    elseif ($data == 'level2_header') {
+        file_get_contents("https://api.telegram.org/bot" . BOT_TOKEN . "/answerCallbackQuery?callback_query_id=" . $callback['id']);
     }
 }
 
@@ -898,12 +1160,36 @@ if (isset($update['message'])) {
                 $current_day = $user['current_day'] ?? 1;
                 $completed_days = $user['completed_days'] ?? [];
                 
-                if ($current_day > 30) {
-                    sendMessage($chat_id, "🎉 You've completed all 30 days! Congratulations! Use '📅 All Days' to review your journey.", getMainKeyboard());
+                // **NEW: Check if user completed Level 1 but hasn't started Level 2**
+                if (isset($user['step']) && 
+                    ($user['step'] == 'level1_completed' || $user['step'] == 'level1_completed_break')) {
+                    
+                    $reflection_language = $user['day_30_language'] ?? 'en';
+                    
+                    // Resend Level 2 offer
+                    $celebration_message = getLevel1CompletionMessage($reflection_language);
+                    
+                    $keyboard = [
+                        'inline_keyboard' => [
+                            [['text' => '🚀 شروع Level 2 / Start Level 2', 'callback_data' => 'start_level2']],
+                            [
+                                ['text' => '📊 مرور سفرم / Review Journey', 'callback_data' => 'review_journey'],
+                                ['text' => '⏸ استراحت / Take a Break', 'callback_data' => 'take_break']
+                            ]
+                        ]
+                    ];
+                    
+                    sendMessage($chat_id, $celebration_message, $keyboard);
+                    break;
+                }
+                
+                // **NEW: Support Level 2**
+                if ($current_day > 60) {
+                    sendMessage($chat_id, "🎉 You've completed all 60 days! Congratulations! Use '📅 All Days' to review your journey.", getMainKeyboard());
                 } elseif (isset($completed_days[$current_day]) && $completed_days[$current_day]['completed']) {
                     sendMessage($chat_id, "✅ You've already completed Day {$current_day}! Great job! Use '📅 All Days' to see other days.", getMainKeyboard());
                 } else {
-                    $challenge = getChallenge($current_day);
+                    $challenge = getChallengeUnified($current_day);
                     if ($challenge) {
                         formatChallengeMessage($current_day, $challenge, $user['name'], $chat_id);
                         
@@ -938,18 +1224,26 @@ if (isset($update['message'])) {
             case '❓ Help':
                 $help_text = "*🆘 How to Use This Bot*\n\n";
                 $help_text .= "*📊 My Progress* - View your journey overview, points, and completion percentage\n\n";
-                $help_text .= "*📅 All Days* - See all 30 days with status indicators. Tap any day to view or edit your response\n\n";
+                $help_text .= "*📅 All Days* - See all days with status indicators. Tap any day to view or edit your response\n\n";
                 $help_text .= "*🎯 Today's Challenge* - Get your current day's challenge\n\n";
                 $help_text .= "*🙏 Daily Gratitude* - Practice gratitude anytime you want\n\n";
                 $help_text .= "*Day Status Indicators:*\n";
                 $help_text .= "✅ = Completed\n";
                 $help_text .= "⭕ = Available to complete\n";
                 $help_text .= "🔒 = Locked (complete previous days first)\n\n";
+                $help_text .= "*Levels:*\n";
+                $help_text .= "📍 Level 1 (Days 1-30): Self-Confidence\n";
+                $help_text .= "📍 Level 2 (Days 31-60): Social Confidence\n\n";
                 $help_text .= "*Privacy:* All your responses are encrypted and stored securely. Only you can see them!\n\n";
                 $help_text .= "Need more help? Contact the bot creator! 😊";
                 
                 sendMessage($chat_id, $help_text, getMainKeyboard());
                 break;
+                
+            case '👤 My Profile':
+                handleProfileMenu($chat_id, $user);
+                break;
+
                 
             default:
                 // Handle challenge responses
@@ -957,7 +1251,7 @@ if (isset($update['message'])) {
                     $day = intval($matches[1]);
                     handleChallengeResponse($user_id, $user, $day, $text);
                 }
-                // Handle final reflection after day 30
+                // **NEW: Handle final reflection after day 30 - Level 1**
                 elseif ($user['step'] == 'waiting_final_reflection') {
                     $final_reflection = trim($text);
                     
@@ -971,27 +1265,84 @@ if (isset($update['message'])) {
                             $thank_message = "*🌟 پایان یک سفر، شروع مسیری جدید 🌟*\n\n";
                             $thank_message .= $final_feedback . "\n\n";
                             $thank_message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
-                            $thank_message .= "این سفر تازه شروع شده است. با اعتماد به نفسی که ساخته‌اید، به جلو حرکت کنید! 🚀\n\n";
-                            $thank_message .= "شما همیشه می‌توانید به پاسخ‌های گذشته خود از طریق '📅 All Days' مراجعه کنید و آن‌ها را مرور کنید.";
                         } else {
                             $thank_message = "*🌟 The End of One Journey, The Beginning of Another 🌟*\n\n";
                             $thank_message .= $final_feedback . "\n\n";
+                            $thank_message .= "━━━━━━━━━\n\n";
+                        }
+                        
+                        sendMessage($chat_id, $thank_message);
+                        
+                        // Small delay
+                        sleep(2);
+                        
+                        // **NEW: Send Level 1 completion celebration**
+                        $celebration_message = getLevel1CompletionMessage($reflection_language);
+                        
+                        $keyboard = [
+                            'inline_keyboard' => [
+                                [['text' => '🚀 شروع Level 2 / Start Level 2', 'callback_data' => 'start_level2']],
+                                [
+                                    ['text' => '📊 مرور سفرم / Review Journey', 'callback_data' => 'review_journey'],
+                                    ['text' => '⏸ استراحت / Take a Break', 'callback_data' => 'take_break']
+                                ]
+                            ]
+                        ];
+                        
+                        sendMessage($chat_id, $celebration_message, $keyboard);
+                        
+                        // Save final reflection
+                        saveUser($user_id, array_merge($user, [
+                            'step' => 'level1_completed',
+                            'final_reflection' => $final_reflection,
+                            'final_reflection_date' => date('Y-m-d H:i:s'),
+                            'last_activity' => date('Y-m-d H:i:s'),
+                            'level2_offered' => true
+                        ]));
+                    } else {
+                        $reflection_language = $user['day_30_language'] ?? 'en';
+                        if ($reflection_language == 'fa') {
+                            sendMessage($chat_id, "لطفاً تجربه خود را با حداقل 10 کاراکتر به اشتراک بگذارید تا بتوانم بازخورد مناسبی به شما بدهم. 😊");
+                        } else {
+                            sendMessage($chat_id, "Please share your experience with at least 10 characters so I can give you proper feedback. 😊");
+                        }
+                    }
+                }
+                // **NEW: Handle final reflection after day 60 - Level 2**
+                elseif ($user['step'] == 'waiting_final_reflection_level2') {
+                    $final_reflection = trim($text);
+                    
+                    if (strlen($final_reflection) >= 10) {
+                        $reflection_language = $user['day_60_language'] ?? 'en';
+                        
+                        // Generate comprehensive final feedback for Level 2
+                        $final_feedback = generateFinalFeedback($user, $final_reflection, $reflection_language);
+                        
+                        if ($reflection_language == 'fa') {
+                            $thank_message = "*🎊 تبریک! Level 2 تموم شد! 🎊*\n\n";
+                            $thank_message .= $final_feedback . "\n\n";
                             $thank_message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
-                            $thank_message .= "This journey has just begun. Move forward with the confidence you've built! 🚀\n\n";
-                            $thank_message .= "You can always revisit and review your past responses through '📅 All Days'.";
+                            $thank_message .= "تو این 60 روز از خودشناسی تا اعتماد به نفس اجتماعی سفر کردی. چه سفر باورنکردنی‌ای! 🚀\n\n";
+                            $thank_message .= "همیشه می‌توانید به پاسخ‌های گذشته خود از طریق '📅 All Days' مراجعه کنید.";
+                        } else {
+                            $thank_message = "*🎊 Congratulations! Level 2 Complete! 🎊*\n\n";
+                            $thank_message .= $final_feedback . "\n\n";
+                            $thank_message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+                            $thank_message .= "In these 60 days, you've journeyed from self-awareness to social confidence. What an incredible journey! 🚀\n\n";
+                            $thank_message .= "You can always revisit your past responses through '📅 All Days'.";
                         }
                         
                         sendMessage($chat_id, $thank_message, getMainKeyboard());
                         
-                        // Save final reflection and mark journey as complete
+                        // Save final reflection and mark both levels complete
                         saveUser($user_id, array_merge($user, [
-                            'step' => 'journey_complete',
-                            'final_reflection' => $final_reflection,
-                            'final_reflection_date' => date('Y-m-d H:i:s'),
+                            'step' => 'both_levels_complete',
+                            'final_reflection_level2' => $final_reflection,
+                            'final_reflection_level2_date' => date('Y-m-d H:i:s'),
                             'last_activity' => date('Y-m-d H:i:s')
                         ]));
                     } else {
-                        $reflection_language = $user['day_30_language'] ?? 'en';
+                        $reflection_language = $user['day_60_language'] ?? 'en';
                         if ($reflection_language == 'fa') {
                             sendMessage($chat_id, "لطفاً تجربه خود را با حداقل 10 کاراکتر به اشتراک بگذارید تا بتوانم بازخورد مناسبی به شما بدهم. 😊");
                         } else {
@@ -1146,7 +1497,24 @@ Format: 2-3 short sentences, no extra emojis, no headers.";
                     } else {
                         sendMessage($chat_id, "Please provide a response with at least 3 characters. 😊");
                     }
-                } else {
+                }
+                // **NEW: Handle profile question text answers**
+                elseif (preg_match('/^profile_q(\d+)_active$/', $user['step'], $matches)) {
+                    $question_num = intval($matches[1]);
+                    handleProfileTextAnswer($user_id, $user, $text, $chat_id);
+                }
+                elseif (preg_match('/^profile_q(\d+)_followup$/', $user['step'], $matches)) {
+                    handleProfileTextAnswer($user_id, $user, $text, $chat_id);
+                }
+                elseif (preg_match('/^profile_edit_q(\d+)_active$/', $user['step'], $matches)) {
+                    $field_num = intval($matches[1]);
+                    handleEditFieldTextAnswer($user_id, $user, $field_num, $text, $chat_id);
+                }
+                elseif (preg_match('/^profile_edit_q(\d+)_followup$/', $user['step'], $matches)) {
+                    $field_num = intval($matches[1]);
+                    handleEditFieldTextAnswer($user_id, $user, $field_num, $text, $chat_id);
+                }
+                else {
                     sendMessage($chat_id, "Hi {$user['name']}! 😊 Use the menu below to navigate:", getMainKeyboard());
                 }
                 break;
